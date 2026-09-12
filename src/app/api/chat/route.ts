@@ -314,9 +314,14 @@ export async function POST(req: NextRequest) {
           `subtask still needs its own start/end datetime spread out sensibly between now and any deadline ` +
           `mentioned (default to the next 1-2 weeks if none given), and every subtask must share the same ` +
           `projectTitle: a short noun-phrase distillation of the goal itself (e.g. "Winning the hackathon", not ` +
-          `"I want to win a hackathon"). These are the user's starting point, not the final word — they land in a ` +
-          `review screen where the user can further split any subtask that still feels too big, so bias toward ` +
-          `fewer, meatier subtasks rather than trying to anticipate every possible sub-step yourself.\n` +
+          `"I want to win a hackathon"). Vary the time of day across subtasks realistically — do NOT default every ` +
+          `subtask to the same clock time just because it lands on a different day (e.g. never "10:00-11:00" on ` +
+          `every single day in a row). Think about each piece of work on its own terms: quick planning/admin ` +
+          `steps often fit in a morning slot, focused build work often runs longer blocks in the afternoon, and ` +
+          `people's schedules aren't perfectly identical day to day — stagger start times so the plan reads like a ` +
+          `real week, not a copy-pasted template. These are the user's starting point, not the final word — they ` +
+          `land in a review screen where the user can further split any subtask that still feels too big, so bias ` +
+          `toward fewer, meatier subtasks rather than trying to anticipate every possible sub-step yourself.\n` +
           `If the user is just asking a question or chatting (not scheduling anything), use isGoalBreakdown: false ` +
           `and return an empty events array.`,
         tools: [{ functionDeclarations: [scheduleTool] }],
