@@ -36,19 +36,13 @@ export default function Home() {
   const [chatOpen, setChatOpen] = useState(false);
 
   const events = useCalendarStore((s) => s.events);
-  const updateEvent = useCalendarStore((s) => s.updateEvent);
   const reviewActive = useCalendarStore((s) => s.reviewActive);
+  const startNewSession = useCalendarStore((s) => s.startNewSession);
+  const openProjectSession = useCalendarStore((s) => s.openProjectSession);
 
   const next = useMemo(() => nextUpEvent(events), [events]);
   const today = useMemo(() => projectsToday(events), [events]);
   const longterm = useMemo(() => longtermGoals(events), [events]);
-
-  // No `status` field exists on CalendarEvent, so "completing" a crumb here reuses the
-  // store's existing updateEvent action to stamp its end just before now — the same
-  // isDone cutoff every progress number and CrumbStack already key off of. Backdating
-  // by a second (rather than using "now" exactly) avoids a same-tick race where the
-  // re-render's own isDone check runs at the same millisecond as this write.
-  const crumbItDone = (id: string) => updateEvent(id, { end: new Date(Date.now() - 1000).toISOString() });
 
   return (
     <div className="mx-auto flex h-screen w-full max-w-[430px] flex-col bg-bg">
@@ -74,7 +68,10 @@ export default function Home() {
 
           <div className="flex flex-col gap-5 px-4 pb-4">
             <Card
-              onClick={() => setChatOpen(true)}
+              onClick={() => {
+                startNewSession();
+                setChatOpen(true);
+              }}
               className="relative flex cursor-pointer items-center justify-between gap-3 border-2 border-ink p-4"
             >
               <span className="text-lg text-ink">Add new task</span>
@@ -98,7 +95,9 @@ export default function Home() {
                     </p>
                   </div>
                   <div className="flex items-end justify-between">
-                    <Button variant="outline" onClick={() => crumbItDone(next.id)}>
+                    {/* "My crumbs" (bottom nav) is reserved for the future profile page,
+                        so this is the way into the crumb list for now. */}
+                    <Button variant="outline" onClick={() => setTab("crumbs")}>
                       Crumb it!
                     </Button>
                     <p className="text-xs text-ink-muted">Time ~{durationMinutes(next)}min</p>
@@ -150,20 +149,29 @@ export default function Home() {
               <div className="mt-2 grid grid-cols-2 gap-3">
                 {longterm.length > 0 ? (
                   longterm.map((g, i) => (
-                    <Card key={g.projectId} className="flex flex-col gap-2 bg-gradient-to-b from-bg to-accent p-3">
-                      <div className="flex items-center justify-between">
-                        <PlayCircle className="h-9 w-9 text-accent-deep" strokeWidth={1.5} />
-                        <img
-                          src={i % 2 === 0 ? "/mascot/goal-1.png" : "/mascot/goal-2.png"}
-                          alt=""
-                          className="h-11 w-11 object-contain"
-                        />
-                      </div>
-                      <div>
-                        <p className="truncate text-sm font-bold text-ink">{g.projectTitle}</p>
-                        <p className="text-xs font-light text-ink-muted">Next step · {g.nextStepMinutes} min</p>
-                      </div>
-                    </Card>
+                    <button
+                      key={g.projectId}
+                      onClick={() => {
+                        openProjectSession(g.projectId, g.projectTitle);
+                        setChatOpen(true);
+                      }}
+                      className="text-left"
+                    >
+                      <Card className="flex flex-col gap-2 bg-gradient-to-b from-bg to-accent p-3">
+                        <div className="flex items-center justify-between">
+                          <PlayCircle className="h-9 w-9 text-accent-deep" strokeWidth={1.5} />
+                          <img
+                            src={i % 2 === 0 ? "/mascot/goal-1.png" : "/mascot/goal-2.png"}
+                            alt=""
+                            className="h-11 w-11 object-contain"
+                          />
+                        </div>
+                        <div>
+                          <p className="truncate text-sm font-bold text-ink">{g.projectTitle}</p>
+                          <p className="text-xs font-light text-ink-muted">Next step · {g.nextStepMinutes} min</p>
+                        </div>
+                      </Card>
+                    </button>
                   ))
                 ) : (
                   <Card className="col-span-2 p-3 text-center text-sm text-ink-muted">
@@ -216,7 +224,7 @@ export default function Home() {
       </nav>
 
       {chatOpen && (
-        <div className="fixed inset-0 z-50 bg-bg">
+        <div className="fixed inset-0 z-50 mx-auto w-full max-w-[430px] bg-bg">
           <ChatPanel onClose={() => setChatOpen(false)} />
         </div>
       )}

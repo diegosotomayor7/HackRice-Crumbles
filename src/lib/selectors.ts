@@ -55,11 +55,15 @@ export function projectProgress(events: CalendarEvent[], now: Date = new Date())
   });
 }
 
-/** Projects with at least one crumb landing today. */
-export function projectsToday(events: CalendarEvent[], now: Date = new Date()): ProjectProgress[] {
-  const todayIds = new Set(
+function projectIdsWithCrumbToday(events: CalendarEvent[], now: Date): Set<string> {
+  return new Set(
     events.filter((e) => e.projectId && isSameLocalDay(new Date(e.start), now)).map((e) => e.projectId!)
   );
+}
+
+/** Projects with at least one crumb landing today. */
+export function projectsToday(events: CalendarEvent[], now: Date = new Date()): ProjectProgress[] {
+  const todayIds = projectIdsWithCrumbToday(events, now);
   return projectProgress(events, now).filter((p) => todayIds.has(p.projectId));
 }
 
@@ -69,21 +73,26 @@ export type LongtermGoal = {
   nextStepMinutes: number;
 };
 
-/** Projects whose next pending crumb lands after today. */
+// Every project not already covered by Today's Plan lands here — including one whose
+// crumbs are all overdue/done, so a goal can never quietly vanish from both sections just
+// because none of its crumbs happen to land exactly on today. Newest project first (Map
+// preserves the order projects first appear in `events`, so this just reverses that).
 export function longtermGoals(events: CalendarEvent[], now: Date = new Date()): LongtermGoal[] {
-  const future = events.filter((e) => {
-    if (!e.projectId || isDone(e, now)) return false;
-    const start = new Date(e.start);
-    return !isSameLocalDay(start, now) && start > now;
-  });
-  return [...groupByProject(future).entries()].map(([projectId, list]) => {
-    const next = [...list].sort((a, b) => a.start.localeCompare(b.start))[0];
-    return {
+  const todayIds = projectIdsWithCrumbToday(events, now);
+  const goals: LongtermGoal[] = [];
+  for (const [projectId, list] of groupByProject(events)) {
+    if (todayIds.has(projectId)) continue;
+    const sorted = [...list].sort((a, b) => a.start.localeCompare(b.start));
+    // Prefer the next crumb still to do; fall back to the last one so a fully-done
+    // project still shows something rather than disappearing entirely.
+    const next = sorted.find((e) => !isDone(e, now)) ?? sorted[sorted.length - 1];
+    goals.push({
       projectId,
       projectTitle: next.projectTitle ?? next.title,
       nextStepMinutes: durationMinutes(next),
-    };
-  });
+    });
+  }
+  return goals.reverse();
 }
 
 /** Earliest not-yet-done event, across all projects and standalone tasks. */

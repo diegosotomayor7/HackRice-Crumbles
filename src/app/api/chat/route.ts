@@ -2,16 +2,22 @@ import { GoogleGenAI, Type, FunctionCallingConfigMode } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
 
 // ---------------------------------------------------------------------------
-// This route is the whole "AI brain" of the app. One tool call does both jobs:
-//   1. Quick create   -> user describes one (or several) concrete thing(s) to
+// This route is the whole "AI brain" of the app. Before the main call, a cheap
+// router (classifyGoal) decides between two tool-forced paths:
+//   1. breakdown -> schedule_calendar_events (the original behavior below).
+//      Quick create: user describes one (or several) concrete thing(s) to
 //      schedule; we return that many events, added straight to the calendar.
-//   2. Goal breakdown -> user describes a big/vague goal; we return an initial
+//      Goal breakdown: user describes a big/vague goal; we return an initial
 //      3-8 subtask breakdown covering the whole goal (isGoalBreakdown: true).
 //      The client puts those cards into the swipe-to-refine review stack
 //      instead of the calendar — the user can further split any one subtask
 //      that still feels too big (see /api/decompose) or insert a gap-filler
 //      between two neighboring cards (see /api/insert-crumb).
-// The model decides which mode applies based on the system instruction below.
+//   2. clarify -> ask_clarifying_questions. Only taken when the goal is vague
+//      enough that a missing detail (timeframe/cadence/session_length/
+//      starting_point) would change the STRUCTURE of the breakdown, not just
+//      the wording of one step. Capped to one round ever per goal (see the
+//      `kind: "clarify"` check below) so the user is never asked twice.
 // ---------------------------------------------------------------------------
 
 const scheduleTool = {
@@ -62,14 +68,107 @@ const scheduleTool = {
   },
 };
 
+const MISSING_SLOTS = ["timeframe", "cadence", "session_length", "starting_point"] as const;
+type MissingSlot = (typeof MISSING_SLOTS)[number];
+
+const clarifyTool = {
+  name: "ask_clarifying_questions",
+  description:
+    "Ask the user a single quick round of tap-to-answer questions before breaking a vague/long-horizon goal " +
+    "down, because a missing detail here would change the STRUCTURE of the breakdown, not just wording or timing.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      reply: {
+        type: Type.STRING,
+        description: "1-2 warm, friendly sentences introducing the questions. No interrogation tone.",
+      },
+      questions: {
+        type: Type.ARRAY,
+        description: "At most 3 questions, each about one of the given missing slots.",
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            slot: { type: Type.STRING, enum: [...MISSING_SLOTS] },
+            question: { type: Type.STRING, description: "Short, plain-language question." },
+            options: {
+              type: Type.ARRAY,
+              description: "2-4 short, tappable predicted answers. Every question must have options.",
+              items: { type: Type.STRING },
+            },
+          },
+          required: ["slot", "question", "options"],
+        },
+      },
+    },
+    required: ["reply", "questions"],
+  },
+};
+
+// A cheap, fast Gemini call that decides whether a missing detail would change the
+// STRUCTURE of the breakdown (-> clarify) or not (-> straight to breakdown). Errs hard
+// toward "breakdown" on any failure/timeout/malformed output — this path must never
+// block or break the main flow, and a wrong assumption here is cheap to fix by swiping.
+async function classifyGoal(
+  ai: GoogleGenAI,
+  message: string
+): Promise<{ route: "breakdown" | "clarify"; missingSlots: MissingSlot[] }> {
+  const fallback = { route: "breakdown" as const, missingSlots: [] as MissingSlot[] };
+  try {
+    const call = ai.models.generateContent({
+      model: "gemini-3.5-flash-lite",
+      contents: [{ role: "user" as const, parts: [{ text: message }] }],
+      config: {
+        systemInstruction:
+          `Decide whether this user message needs one quick round of clarifying questions before it can be ` +
+          `broken down into a task/calendar plan, or whether it can be broken down immediately. ` +
+          `Ask (route: "clarify") ONLY when a missing piece of information would change the STRUCTURE of the ` +
+          `breakdown (which steps exist, how many, over what span) — not just the wording or exact timing of one ` +
+          `step. Short-horizon concrete tasks (e.g. "clean my room", "finish my problem set tonight") are always ` +
+          `"breakdown" with zero questions. Long-horizon or open-ended goals where the timeframe, recurrence, or ` +
+          `starting point is genuinely unknown (e.g. "get an internship for next summer", "go to the gym ` +
+          `regularly") are "clarify". When in doubt, choose "breakdown". ` +
+          `missingSlots must be a subset of: ${MISSING_SLOTS.join(", ")}.`,
+        maxOutputTokens: 200,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            route: { type: Type.STRING, enum: ["breakdown", "clarify"] },
+            missingSlots: { type: Type.ARRAY, items: { type: Type.STRING, enum: [...MISSING_SLOTS] } },
+          },
+          required: ["route", "missingSlots"],
+        },
+      },
+    });
+
+    const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("router timeout")), 1500));
+    const response = await Promise.race([call, timeout]);
+
+    const parsed = JSON.parse(response.text ?? "") as { route?: string; missingSlots?: unknown };
+    if (parsed.route !== "clarify") return fallback;
+
+    const missingSlots = Array.isArray(parsed.missingSlots)
+      ? parsed.missingSlots.filter((s): s is MissingSlot => (MISSING_SLOTS as readonly string[]).includes(s as string))
+      : [];
+    if (missingSlots.length === 0) return fallback;
+
+    return { route: "clarify", missingSlots };
+  } catch (err) {
+    console.error("classifyGoal failed, falling back to breakdown", err);
+    return fallback;
+  }
+}
+
 const PROJECT_COLORS = ["#6366f1", "#0ea5e9", "#22c55e", "#f97316", "#ec4899", "#a855f7"];
 
 export async function POST(req: NextRequest) {
-  const { message, history, clientNow, existingEvents } = (await req.json()) as {
+  const { message, history, clientNow, existingEvents, forceBreakdown } = (await req.json()) as {
     message: string;
-    history: { role: "user" | "assistant"; content: string }[];
+    history: { role: "user" | "assistant"; content: string; kind?: "clarify" }[];
     clientNow?: string;
     existingEvents?: { title: string; start: string; end: string; allDay?: boolean }[];
+    forceBreakdown?: boolean;
   };
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -105,7 +204,58 @@ export async function POST(req: NextRequest) {
     { role: "user" as const, parts: [{ text: message }] },
   ];
 
+  // At most one clarify round ever: if we already asked once in this conversation (or the
+  // caller explicitly wants to skip straight to a breakdown, e.g. the "Just start" button),
+  // don't even spend the latency on the router — force breakdown immediately.
+  const alreadyClarified = history.some((m) => m.kind === "clarify");
+  const { route, missingSlots } =
+    forceBreakdown || alreadyClarified ? { route: "breakdown" as const, missingSlots: [] } : await classifyGoal(ai, message);
+
   try {
+    if (route === "clarify") {
+      const clarifyResponse = await ai.models.generateContent({
+        model: "gemini-3.5-flash-lite",
+        contents,
+        config: {
+          systemInstruction:
+            `You are Crumbles, helping someone who struggles to start things. Before breaking their goal down, ` +
+            `ask ONE quick round of tap-to-answer questions — at most 3 — about ONLY these missing details: ` +
+            `${missingSlots.join(", ")}. Every question MUST include 2-4 short, predicted-answer options; never ask ` +
+            `an open-ended question with no options. Keep the reply warm and brief (1-2 sentences), no interrogation ` +
+            `tone. Always respond by calling ask_clarifying_questions.`,
+          tools: [{ functionDeclarations: [clarifyTool] }],
+          toolConfig: {
+            functionCallingConfig: {
+              mode: FunctionCallingConfigMode.ANY,
+              allowedFunctionNames: ["ask_clarifying_questions"],
+            },
+          },
+        },
+      });
+
+      const call =
+        clarifyResponse.functionCalls?.[0] ??
+        (clarifyResponse.candidates?.[0]?.content?.parts?.find((p) => p.functionCall)
+          ?.functionCall as { args?: Record<string, unknown> } | undefined);
+
+      const args = (call?.args ?? { reply: clarifyResponse.text ?? "Quick question first:", questions: [] }) as {
+        reply: string;
+        questions: { slot: string; question: string; options: string[] }[];
+      };
+
+      console.log(
+        "[ask_clarifying_questions] raw tool call ->\n" +
+          JSON.stringify({ name: "ask_clarifying_questions", args }, null, 2)
+      );
+
+      return NextResponse.json({
+        type: "clarify",
+        reply: args.reply,
+        questions: args.questions ?? [],
+        debug: { toolCall: { name: "ask_clarifying_questions", args } },
+      });
+    }
+
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash-lite",
       contents,
@@ -155,7 +305,10 @@ export async function POST(req: NextRequest) {
           `and return an empty events array.`,
         tools: [{ functionDeclarations: [scheduleTool] }],
         toolConfig: {
-          functionCallingConfig: { mode: FunctionCallingConfigMode.ANY },
+          functionCallingConfig: {
+            mode: FunctionCallingConfigMode.ANY,
+            allowedFunctionNames: ["schedule_calendar_events"],
+          },
         },
       },
     });
@@ -215,6 +368,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({
+      type: "events",
       reply: args.reply,
       isGoalBreakdown: args.isGoalBreakdown,
       events,

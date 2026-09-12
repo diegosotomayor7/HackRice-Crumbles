@@ -22,6 +22,22 @@ export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   createdAt: string;
+  /** Set on an assistant turn that asked tap-to-answer clarifying questions, so the chat route's
+   * router can see (via `history`) that this goal already had its one clarify round and must not
+   * ask again. */
+  kind?: "clarify";
+};
+
+// One chat conversation. `projectId` links a session to the goal it produced (matches
+// CalendarEvent#projectId, itself the AI's projectTitle) so the "Longterm goals" card for
+// that goal can reopen this exact conversation instead of starting a new one. Sessions
+// with no projectId are ad-hoc chats — e.g. one that hasn't produced a goal breakdown yet.
+export type ChatSession = {
+  id: string;
+  projectId?: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: string;
 };
 
 // A crumb the user hasn't committed to the calendar yet. Lives in a separate staging
