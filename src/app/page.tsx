@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import ChatPanel from "@/components/ChatPanel";
+import CrumbStack from "@/components/CrumbStack";
 
 // FullCalendar touches window/document — load client-side only.
 const Calendar = dynamic(() => import("@/components/Calendar"), { ssr: false });
@@ -14,6 +15,10 @@ export default function Home() {
           Crumbles <span className="font-normal text-neutral-400">— Convert intentions to actions.</span>
         </h1>
       </header>
+      <div className="px-4 pt-4">
+        <h2 className="mb-2 text-xs font-semibold tracking-wide text-neutral-400 uppercase">Up next</h2>
+        <CrumbStack />
+      </div>
       <main className="grid flex-1 grid-cols-1 gap-4 overflow-hidden p-4 md:grid-cols-[360px_1fr]">
         <div className="order-2 min-h-0 md:order-1">
           <ChatPanel />
