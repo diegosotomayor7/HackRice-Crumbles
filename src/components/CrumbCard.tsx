@@ -91,7 +91,7 @@ export default function CrumbCard({
       >
         <div className="min-w-0">
           {crumb.projectTitle && crumb.projectTitle !== crumb.title && (
-            <div className="truncate text-xs font-medium text-accent-deep">{crumb.projectTitle}</div>
+            <div className="truncate text-xs font-medium text-ink">{crumb.projectTitle}</div>
           )}
           <div className="truncate font-medium text-black">{crumb.title}</div>
           <div className="text-xs text-black/60">{formatWindow(crumb)}</div>
