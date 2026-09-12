@@ -13,13 +13,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Flux — AI-native calendar",
+  title: "Crumble — AI-native calendar",
   description: "The calendar that plans for you: chat with an AI to schedule events and break big goals into subtasks.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Flux",
+    title: "Crumble",
   },
 };
 

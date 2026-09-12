@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       contents,
       config: {
         systemInstruction:
-          `You are Flux, an AI scheduling assistant embedded in a calendar app. ` +
+          `You are Crumble, an AI scheduling assistant embedded in a calendar app. ` +
           `The current date/time, exactly as shown on the user's own device, is ${nowLabel} (a ${nowDayOfWeek}). ` +
           `Always compute relative dates ("today", "tomorrow", "next week", "in 3 days") from this exact value — ` +
           `"tomorrow" always means the calendar day immediately after ${nowLabel.slice(0, 10)}, never two days later. ` +

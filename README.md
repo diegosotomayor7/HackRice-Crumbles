@@ -1,4 +1,4 @@
-# Flux — the calendar that plans for you
+# Crumble — the calendar that plans for you
 
 Hackathon starter: a calendar web app with an AI chatbot that (1) quick-creates events
 from natural language and (2) breaks a big/vague goal into scheduled subtasks.
