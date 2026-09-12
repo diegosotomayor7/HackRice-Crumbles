@@ -62,7 +62,13 @@ export default function ChatPanel({ onClose }: { onClose?: () => void }) {
         message: text,
         history: historyMessages.map((m) => ({ role: m.role, content: m.content, kind: m.kind })),
         clientNow,
-        existingEvents: events.map((e) => ({ title: e.title, start: e.start, end: e.end, allDay: e.allDay })),
+        existingEvents: events.map((e) => ({
+          title: e.title,
+          start: e.start,
+          end: e.end,
+          allDay: e.allDay,
+          color: e.color,
+        })),
         forceBreakdown,
       }),
     });

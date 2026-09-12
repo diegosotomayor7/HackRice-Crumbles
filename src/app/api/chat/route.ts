@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
     message: string;
     history: { role: "user" | "assistant"; content: string; kind?: "clarify" }[];
     clientNow?: string;
-    existingEvents?: { title: string; start: string; end: string; allDay?: boolean }[];
+    existingEvents?: { title: string; start: string; end: string; allDay?: boolean; color?: string }[];
     forceBreakdown?: boolean;
   };
 
@@ -357,6 +357,13 @@ export async function POST(req: NextRequest) {
     );
 
     // Assign a shared color per projectTitle so breakdown subtasks look grouped on the calendar.
+    // Prefer a color not already used by anything on the calendar — without this, nextColor
+    // always restarted at 0 each request, so a single-project request (the common case)
+    // always landed on PROJECT_COLORS[0] no matter what colors were already in use.
+    const usedColors = new Set(
+      (existingEvents ?? []).map((e) => e.color).filter((c): c is string => Boolean(c))
+    );
+    const colorPool = [...PROJECT_COLORS.filter((c) => !usedColors.has(c)), ...PROJECT_COLORS];
     const colorByProject = new Map<string, string>();
     let nextColor = 0;
     const events = (args.events ?? []).map((e) => {
@@ -364,7 +371,7 @@ export async function POST(req: NextRequest) {
       let projectId: string | undefined;
       if (e.projectTitle) {
         if (!colorByProject.has(e.projectTitle)) {
-          colorByProject.set(e.projectTitle, PROJECT_COLORS[nextColor % PROJECT_COLORS.length]);
+          colorByProject.set(e.projectTitle, colorPool[nextColor % colorPool.length]);
           nextColor += 1;
         }
         color = colorByProject.get(e.projectTitle);
