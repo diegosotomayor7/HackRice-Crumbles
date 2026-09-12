@@ -7,6 +7,7 @@ import { Bell, ChevronsRight, PlayCircle } from "lucide-react";
 import ChatPanel from "@/components/ChatPanel";
 import CrumbStack from "@/components/CrumbStack";
 import CrumbReview from "@/components/CrumbReview";
+import ProfilePage from "@/components/ProfilePage";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import SectionHeader from "@/components/ui/SectionHeader";
@@ -17,7 +18,7 @@ import { durationMinutes, longtermGoals, nextUpEvent, projectsToday, stepCount }
 // FullCalendar touches window/document — load client-side only.
 const Calendar = dynamic(() => import("@/components/Calendar"), { ssr: false });
 
-type Tab = "home" | "calendar" | "crumbs";
+type Tab = "home" | "calendar" | "crumbs" | "profile";
 
 // Design placeholder until accounts exist.
 const USER_NAME = "User";
@@ -95,12 +96,10 @@ export default function Home() {
                     </p>
                   </div>
                   <div className="flex items-end justify-between">
-                    {/* "My crumbs" (bottom nav) is reserved for the future profile page,
-                        so this is the way into the crumb list for now. */}
                     <Button variant="outline" onClick={() => setTab("crumbs")}>
                       Crumb it!
                     </Button>
-                    <p className="text-xs text-black/60">Time ~{durationMinutes(next)}min</p>
+                    <p className="mr-4 text-xs text-black/60">Time ~{durationMinutes(next)}min</p>
                   </div>
                 </Card>
               ) : (
@@ -196,6 +195,12 @@ export default function Home() {
         </main>
       )}
 
+      {tab === "profile" && (
+        <main className="min-h-0 flex-1 overflow-y-auto">
+          <ProfilePage />
+        </main>
+      )}
+
       <nav
         className="flex justify-around rounded-t-[21px] bg-bg pt-2 pb-4 shadow-[0_-1px_20px_rgba(0,0,0,0.1)]"
         style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
@@ -204,7 +209,7 @@ export default function Home() {
           [
             { key: "home", label: "Home", icon: "/mascot/nav-home.png" },
             { key: "calendar", label: "Calendar", icon: "/mascot/nav-calendar.png" },
-            { key: "crumbs", label: "My crumbs", icon: "/mascot/nav-crumbs.png" },
+            { key: "profile", label: "My crumbs", icon: "/mascot/nav-crumbs.png" },
           ] as const
         ).map(({ key, label, icon }) => {
           const active = tab === key;

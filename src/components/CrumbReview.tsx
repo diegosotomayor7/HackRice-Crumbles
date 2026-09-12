@@ -86,40 +86,20 @@ export default function CrumbReview() {
     }
   };
 
-  const insertBetween = async (prev: DraftCrumb, next: DraftCrumb) => {
-    if (draftCrumbs.length >= MAX_DRAFT_CRUMBS) return false;
-    try {
-      const res = await fetch("/api/insert-crumb", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prev: { title: prev.title, start: prev.start, end: prev.end, allDay: prev.allDay, notes: prev.notes },
-          next: { title: next.title, start: next.start, end: next.end, allDay: next.allDay, notes: next.notes },
-          projectTitle: prev.projectTitle ?? next.projectTitle,
-          clientNow: clientNowLabel(),
-        }),
-      });
-      if (!res.ok) return false;
-      const data = (await res.json()) as {
-        crumb?: { title: string; start: string; end: string; allDay?: boolean; notes?: string };
-      };
-      if (!data.crumb) return false;
-      const inserted: DraftCrumb = {
-        id: crypto.randomUUID(),
-        title: data.crumb.title,
-        start: data.crumb.start,
-        end: data.crumb.end,
-        allDay: data.crumb.allDay ?? false,
-        notes: data.crumb.notes,
-        projectId: prev.projectId ?? next.projectId,
-        projectTitle: prev.projectTitle ?? next.projectTitle,
-        color: prev.color ?? next.color,
-        depth: Math.max(prev.depth, next.depth),
-      };
-      return insertDraftCrumb(inserted);
-    } catch {
-      return false;
-    }
+  const insertBetween = (prev: DraftCrumb, next: DraftCrumb, title: string) => {
+    if (new Date(next.start).getTime() <= new Date(prev.end).getTime()) return false;
+    const inserted: DraftCrumb = {
+      id: crypto.randomUUID(),
+      title,
+      start: prev.end,
+      end: next.start,
+      allDay: false,
+      projectId: prev.projectId ?? next.projectId,
+      projectTitle: prev.projectTitle ?? next.projectTitle,
+      color: prev.color ?? next.color,
+      depth: Math.max(prev.depth, next.depth),
+    };
+    return insertDraftCrumb(inserted);
   };
 
   return (
@@ -141,7 +121,6 @@ export default function CrumbReview() {
             Max {MAX_DRAFT_CRUMBS} cards reached — add some to your calendar to split further.
           </div>
         )}
-
         <div className="relative flex flex-1 flex-col">
           {/* Timeline spine, running through the center of every date circle below. */}
           {sorted.length > 0 && <div className="absolute top-5 bottom-5 left-5 w-0.5 -translate-x-1/2 bg-black" />}
@@ -165,7 +144,7 @@ export default function CrumbReview() {
               const prev = sorted[i - 1];
               const gap = (
                 <div key={`gap-${prev.id}-${crumb.id}`} className="flex items-center gap-3">
-                  <InsertGapButton disabled={atCap} onInsert={() => insertBetween(prev, crumb)} />
+                  <InsertGapButton disabled={atCap} onInsert={(title) => insertBetween(prev, crumb, title)} />
                 </div>
               );
               return [gap, row];

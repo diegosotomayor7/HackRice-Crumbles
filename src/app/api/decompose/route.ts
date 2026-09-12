@@ -25,7 +25,9 @@ const splitTool = {
           properties: {
             title: {
               type: Type.STRING,
-              description: "A single, concrete, physical next action — never a rephrasing of the original task.",
+              description:
+                "A single, concrete, physical next action — never a rephrasing of the original task. At most " +
+                "48 characters, so it fits on one line (e.g. \"Write and run your first console.log script\").",
             },
             start: { type: Type.STRING, description: "ISO 8601 datetime, e.g. 2026-09-15T14:00:00" },
             end: { type: Type.STRING, description: "ISO 8601 datetime, must be after start." },
@@ -84,7 +86,8 @@ export async function POST(req: NextRequest) {
           `You are Crumbles. You help people who struggle to start things by breaking a task into ` +
           `crumbs: single, concrete, physical next actions that take 5-45 minutes and require no further ` +
           `planning or decision-making from the user. A crumb names an observable action ("open the job board ` +
-          `and save 3 postings"), never a vague intention ("research internships"). ` +
+          `and save 3 postings"), never a vague intention ("research internships"). Keep every title to at most ` +
+          `48 characters so it fits on one line in the UI (e.g. "Write and run your first console.log script"). ` +
           `The current date/time is ${nowLabel}. Do not schedule anything before this. ` +
           `Write every start/end as a naive local datetime with NO timezone suffix (no "Z", no offset), e.g. ` +
           `2026-09-15T14:00:00. ` +
