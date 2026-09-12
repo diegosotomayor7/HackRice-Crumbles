@@ -24,3 +24,30 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* FullCalendar's default toolbar is sized for a wide desktop view; the app is now a fixed
+   phone-width column, so shrink the title/buttons and let the toolbar wrap onto two tight
+   rows instead of the default three-line overflow. */
+.crumbles-calendar .fc-toolbar {
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.crumbles-calendar .fc-toolbar-chunk {
+  display: flex;
+  align-items: center;
+}
+
+.crumbles-calendar .fc-toolbar-title {
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.crumbles-calendar .fc-button {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.crumbles-calendar .fc-header-toolbar {
+  margin-bottom: 0.5rem;
+}

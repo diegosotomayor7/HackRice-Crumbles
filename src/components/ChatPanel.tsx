@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Send, Sparkles } from "lucide-react";
+import { Send, Sparkles, X } from "lucide-react";
 import clsx from "clsx";
 import { useCalendarStore } from "@/lib/store";
 import { CalendarEvent } from "@/types/event";
 
-export default function ChatPanel() {
+export default function ChatPanel({ onClose }: { onClose?: () => void }) {
   const messages = useCalendarStore((s) => s.messages);
   const addMessage = useCalendarStore((s) => s.addMessage);
   const addEvents = useCalendarStore((s) => s.addEvents);
@@ -82,10 +82,19 @@ export default function ChatPanel() {
   };
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-black/10 bg-white shadow-sm dark:border-white/10 dark:bg-neutral-900">
+    <div className="flex h-full flex-col bg-white dark:bg-neutral-900">
       <div className="flex items-center gap-2 border-b border-black/10 p-3 dark:border-white/10">
         <Sparkles className="h-4 w-4 text-indigo-500" />
-        <span className="font-medium">Crumbles</span>
+        <span className="flex-1 font-medium">Crumbles</span>
+        {onClose && (
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-md p-1 text-neutral-400 hover:bg-black/5 hover:text-neutral-600 dark:hover:bg-white/10 dark:hover:text-neutral-300"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto p-3">

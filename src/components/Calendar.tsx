@@ -90,14 +90,14 @@ export default function Calendar() {
         </button>
       </div>
 
-      <div className="min-h-0 flex-1">
+      <div className="crumbles-calendar min-h-0 flex-1">
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
+          initialView="timeGridDay"
           headerToolbar={{
             left: "prev,next today",
             center: "title",
-            right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
+            right: "timeGridDay,timeGridWeek,dayGridMonth,listWeek",
           }}
           editable
           selectable
