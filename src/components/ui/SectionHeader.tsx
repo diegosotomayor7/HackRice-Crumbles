@@ -9,8 +9,8 @@ export default function SectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <h2 className="font-heading text-base font-semibold text-ink">{title}</h2>
-      {action && <span className="text-sm text-ink-muted">{action}</span>}
+      <h2 className="font-heading text-base font-semibold text-black">{title}</h2>
+      {action && <span className="text-sm text-black/60">{action}</span>}
     </div>
   );
 }

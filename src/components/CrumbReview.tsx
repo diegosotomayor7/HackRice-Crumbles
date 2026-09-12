@@ -1,7 +1,8 @@
 "use client";
 
 import { AnimatePresence } from "motion/react";
-import { X, CalendarPlus } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { CalendarPlus } from "lucide-react";
 import { useCalendarStore, MAX_DRAFT_CRUMBS } from "@/lib/store";
 import { DraftCrumb } from "@/types/event";
 import CrumbCard from "./CrumbCard";
@@ -13,6 +14,18 @@ function clientNowLabel() {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(
     now.getMinutes()
   )}:${pad(now.getSeconds())}`;
+}
+
+// The timeline's date badge: month + day, stacked. The card itself only shows the
+// time-of-day (see CrumbCard#formatWindow) so the date lives in exactly one place.
+function DateBadge({ iso }: { iso: string }) {
+  const d = parseISO(iso);
+  return (
+    <div className="relative z-10 flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-full bg-black text-white">
+      <span className="text-[9px] leading-none font-medium tracking-wide uppercase">{format(d, "MMM")}</span>
+      <span className="text-sm leading-none font-bold">{format(d, "d")}</span>
+    </div>
+  );
 }
 
 // Full-screen takeover shown after the AI hands back a goal card (isGoalBreakdown).
@@ -29,6 +42,7 @@ export default function CrumbReview() {
   // Soonest first — the card you'd act on next sits at the top.
   const sorted = [...draftCrumbs].sort((a, b) => a.start.localeCompare(b.start));
   const atCap = draftCrumbs.length >= MAX_DRAFT_CRUMBS;
+  const goalTitle = sorted[0]?.projectTitle ?? "Your plan";
 
   const split = async (crumb: DraftCrumb) => {
     if (draftCrumbs.length >= MAX_DRAFT_CRUMBS) return false;
@@ -109,63 +123,66 @@ export default function CrumbReview() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-neutral-50 dark:bg-neutral-950">
-      <header className="flex items-center justify-between border-b border-black/10 px-4 py-3 dark:border-white/10">
-        <div>
-          <h2 className="font-semibold">Refine your plan</h2>
-          <p className="text-xs text-neutral-500">
-            Swipe right to add a card to your calendar, left if it&apos;s still too big. Tap the + between two cards
-            to insert a step.
-          </p>
-        </div>
+    <div className="fixed inset-0 z-50 mx-auto flex w-full max-w-[430px] flex-col bg-white">
+      <header className="flex items-start justify-between gap-3 px-4 pt-4 pb-2">
+        <h2 className="font-heading min-w-0 flex-1 text-2xl leading-tight font-bold text-black">{goalTitle}</h2>
         <button
           onClick={discardReview}
           title="Discard without adding to calendar"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-400 hover:bg-black/5 dark:hover:bg-white/10"
+          className="shrink-0 rounded-full bg-black px-4 py-1.5 text-sm font-medium text-white hover:opacity-90"
         >
-          <X className="h-5 w-5" />
+          Back
         </button>
       </header>
 
-      <div className="mx-auto flex w-full max-w-[480px] flex-1 flex-col gap-3 overflow-y-auto p-4">
+      <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-4">
         {atCap && (
-          <div className="rounded-lg bg-amber-100 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+          <div className="mb-3 rounded-lg border border-tan bg-tan/20 px-3 py-2 text-xs text-black">
             Max {MAX_DRAFT_CRUMBS} cards reached — add some to your calendar to split further.
           </div>
         )}
-        <AnimatePresence initial={false}>
-          {sorted.flatMap((crumb, i) => {
-            const card = (
-              <CrumbCard
-                key={crumb.id}
-                crumb={crumb}
-                splitBlocked={atCap}
-                onCommit={() => commitDraftCrumb(crumb.id)}
-                onSplit={() => split(crumb)}
-              />
-            );
-            if (i === 0) return [card];
-            const prev = sorted[i - 1];
-            const gap = (
-              <InsertGapButton
-                key={`gap-${prev.id}-${crumb.id}`}
-                disabled={atCap}
-                onInsert={() => insertBetween(prev, crumb)}
-              />
-            );
-            return [gap, card];
-          })}
-        </AnimatePresence>
-        {sorted.length === 0 && (
-          <div className="flex flex-1 items-center justify-center text-sm text-neutral-400">All done!</div>
-        )}
+
+        <div className="relative flex flex-1 flex-col">
+          {/* Timeline spine, running through the center of every date circle below. */}
+          {sorted.length > 0 && <div className="absolute top-5 bottom-5 left-5 w-0.5 -translate-x-1/2 bg-black" />}
+
+          <AnimatePresence initial={false}>
+            {sorted.flatMap((crumb, i) => {
+              const row = (
+                <div key={crumb.id} className="flex items-center gap-3 py-1.5">
+                  <DateBadge iso={crumb.start} />
+                  <div className="min-w-0 flex-1">
+                    <CrumbCard
+                      crumb={crumb}
+                      splitBlocked={atCap}
+                      onCommit={() => commitDraftCrumb(crumb.id)}
+                      onSplit={() => split(crumb)}
+                    />
+                  </div>
+                </div>
+              );
+              if (i === 0) return [row];
+              const prev = sorted[i - 1];
+              const gap = (
+                <div key={`gap-${prev.id}-${crumb.id}`} className="flex items-center gap-3">
+                  <InsertGapButton disabled={atCap} onInsert={() => insertBetween(prev, crumb)} />
+                </div>
+              );
+              return [gap, row];
+            })}
+          </AnimatePresence>
+
+          {sorted.length === 0 && (
+            <div className="flex flex-1 items-center justify-center text-sm text-black/40">All done!</div>
+          )}
+        </div>
       </div>
 
-      <div className="border-t border-black/10 p-4 dark:border-white/10">
+      <div className="border-t-2 border-black p-4">
         <button
           onClick={commitAllDraftCrumbs}
           disabled={draftCrumbs.length === 0}
-          className="mx-auto flex w-full max-w-[480px] items-center justify-center gap-2 rounded-lg bg-indigo-600 py-3 font-medium text-white disabled:opacity-40"
+          className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-black bg-accent py-3 font-bold text-black disabled:opacity-40"
         >
           <CalendarPlus className="h-4 w-4" />
           Add all {draftCrumbs.length > 0 ? `${draftCrumbs.length} ` : ""}to calendar

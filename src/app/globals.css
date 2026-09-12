@@ -6,7 +6,7 @@
   --color-surface: #fad9a2; /* Crumb */
   --color-ink: #6b3f24; /* Choco */
   --color-ink-muted: color-mix(in srgb, var(--color-ink) 60%, transparent);
-  --color-accent: #d7ff5b; /* Sprout / Acid Green */
+  --color-accent: #d7f960; /* Sprout / Acid Green */
   --color-accent-deep: #8fb52e;
   --color-tan: #f4b35e; /* Cookie */
   --radius-card: 1.25rem;
@@ -24,6 +24,7 @@
   --radius-card: var(--radius-card);
   --shadow-card: var(--shadow-card);
   --font-heading: var(--font-heading);
+  --font-jersey: var(--font-jersey);
 }
 
 body {

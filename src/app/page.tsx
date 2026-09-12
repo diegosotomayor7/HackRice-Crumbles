@@ -53,14 +53,14 @@ export default function Home() {
               <img src="/mascot/avatar.png" alt="" className="h-full w-full object-cover" />
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="font-heading truncate text-lg font-semibold text-ink">
+              <h1 className="font-heading truncate text-lg font-semibold text-black">
                 {greeting(new Date())}, {USER_NAME}
               </h1>
-              <p className="text-sm text-ink-muted">Welcome back!</p>
+              <p className="text-sm text-black/60">Welcome back!</p>
             </div>
             <button
               aria-label="Notifications"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink hover:bg-ink/10"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-black hover:bg-black/10"
             >
               <Bell className="h-6 w-6" />
             </button>
@@ -72,24 +72,24 @@ export default function Home() {
                 startNewSession();
                 setChatOpen(true);
               }}
-              className="relative flex cursor-pointer items-center justify-between gap-3 border-2 border-ink p-4"
+              className="relative flex cursor-pointer items-center justify-between gap-3 border-2 border-black p-4"
             >
-              <span className="text-lg text-ink">Add new task</span>
+              <span className="text-lg text-black">Add new task</span>
               <img src="/mascot/add-task.png" alt="" className="h-10 w-10 shrink-0" />
             </Card>
 
             <div>
               {next ? (
-                <Card className="relative flex flex-col gap-3 overflow-visible bg-accent p-5 pr-24">
+                <Card className="relative flex flex-col gap-3 overflow-visible border-black bg-accent p-5 pr-24">
                   <img
                     src="/mascot/next-up.png"
                     alt=""
-                    className="pointer-events-none absolute -right-2 -bottom-4 h-28 w-28 object-contain"
+                    className="pointer-events-none absolute -right-2 -up-10 h-32 w-32 object-contain"
                   />
-                  <h2 className="font-heading text-xl font-bold text-ink">Next up for you</h2>
+                  <h2 className="font-jersey text-3xl text-black">Next up for you</h2>
                   <div>
-                    <p className="text-sm font-medium text-ink">{timeFormatter.format(new Date(next.start))}</p>
-                    <p className="text-sm text-ink">
+                    <p className="text-sm font-medium text-black">{timeFormatter.format(new Date(next.start))}</p>
+                    <p className="text-sm text-black">
                       {next.title}
                       {next.projectId ? ` · ${stepCount(events, next.projectId)} step action` : ""}
                     </p>
@@ -100,11 +100,11 @@ export default function Home() {
                     <Button variant="outline" onClick={() => setTab("crumbs")}>
                       Crumb it!
                     </Button>
-                    <p className="text-xs text-ink-muted">Time ~{durationMinutes(next)}min</p>
+                    <p className="text-xs text-black/60">Time ~{durationMinutes(next)}min</p>
                   </div>
                 </Card>
               ) : (
-                <Card className="p-4 text-center text-sm text-ink-muted">
+                <Card className="p-4 text-center text-sm text-black/60">
                   Nothing coming up. Tell the chat about a goal to get started.
                 </Card>
               )}
@@ -114,13 +114,13 @@ export default function Home() {
               <SectionHeader
                 title="Today's Plan"
                 action={
-                  <button onClick={() => setTab("calendar")} className="flex items-center gap-0.5 text-ink-muted">
+                  <button onClick={() => setTab("calendar")} className="flex items-center gap-0.5 text-black/60">
                     Full calendar
                     <ChevronsRight className="h-4 w-4" />
                   </button>
                 }
               />
-              <Card className="mt-2 flex flex-col gap-4 border-2 border-ink p-4">
+              <Card className="mt-2 flex flex-col gap-4 border-2 border-black p-4">
                 {today.length > 0 ? (
                   today.map((p) => (
                     <ProgressRow
@@ -131,7 +131,7 @@ export default function Home() {
                     />
                   ))
                 ) : (
-                  <p className="text-sm text-ink-muted">Nothing planned for today yet.</p>
+                  <p className="text-sm text-black/60">Nothing planned for today yet.</p>
                 )}
               </Card>
             </div>
@@ -140,7 +140,7 @@ export default function Home() {
               <SectionHeader
                 title="Longterm goals"
                 action={
-                  <button onClick={() => setTab("crumbs")} className="flex items-center gap-0.5 text-ink-muted">
+                  <button onClick={() => setTab("crumbs")} className="flex items-center gap-0.5 text-black/60">
                     Details
                     <ChevronsRight className="h-4 w-4" />
                   </button>
@@ -157,7 +157,7 @@ export default function Home() {
                       }}
                       className="text-left"
                     >
-                      <Card className="flex flex-col gap-2 bg-gradient-to-b from-bg to-accent p-3">
+                      <Card className="flex flex-col gap-2 border-black bg-gradient-to-b from-bg to-accent p-3">
                         <div className="flex items-center justify-between">
                           <PlayCircle className="h-9 w-9 text-accent-deep" strokeWidth={1.5} />
                           <img
@@ -167,14 +167,14 @@ export default function Home() {
                           />
                         </div>
                         <div>
-                          <p className="truncate text-sm font-bold text-ink">{g.projectTitle}</p>
-                          <p className="text-xs font-light text-ink-muted">Next step · {g.nextStepMinutes} min</p>
+                          <p className="truncate text-sm font-bold text-black">{g.projectTitle}</p>
+                          <p className="text-xs font-light text-black/60">Next step · {g.nextStepMinutes} min</p>
                         </div>
                       </Card>
                     </button>
                   ))
                 ) : (
-                  <Card className="col-span-2 p-3 text-center text-sm text-ink-muted">
+                  <Card className="col-span-2 p-3 text-center text-sm text-black/60">
                     No longterm goals yet.
                   </Card>
                 )}
@@ -215,7 +215,7 @@ export default function Home() {
                 alt=""
                 className={clsx("h-12 w-12 object-contain transition-all", active ? "scale-110" : "opacity-50")}
               />
-              <span className={clsx("text-xs", active ? "font-bold text-ink" : "font-normal text-ink/40")}>
+              <span className={clsx("text-xs", active ? "font-bold text-black" : "font-normal text-black/40")}>
                 {label}
               </span>
             </button>
