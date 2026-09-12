@@ -39,6 +39,10 @@ body {
 .crumbles-calendar {
   background-color: #fff;
   border-radius: var(--radius-card);
+  /* FullCalendar's own grid (.fc-scrollgrid) draws a square-cornered border right to this
+     container's edge; without clipping, those square corners poke out past our rounded
+     ones. */
+  overflow: hidden;
 }
 
 /* The default "today" cell highlight is also FullCalendar blue — soften it to a pale
