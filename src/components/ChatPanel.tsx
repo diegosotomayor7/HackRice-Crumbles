@@ -295,7 +295,7 @@ export default function ChatPanel({ onClose }: { onClose?: () => void }) {
         )}
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto p-3">
+      <div className="hide-scrollbar flex-1 space-y-3 overflow-y-auto p-3">
         {messages.map((m) => {
           const clarify = clarifyByMessage[m.id];
           return (

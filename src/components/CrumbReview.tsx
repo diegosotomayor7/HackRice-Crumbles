@@ -115,7 +115,7 @@ export default function CrumbReview() {
         </button>
       </header>
 
-      <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-4">
+      <div className="hide-scrollbar flex flex-1 flex-col overflow-y-auto px-4 pb-4">
         {atCap && (
           <div className="mb-3 rounded-lg border border-tan bg-tan/20 px-3 py-2 text-xs text-black">
             Max {MAX_DRAFT_CRUMBS} cards reached — add some to your calendar to split further.

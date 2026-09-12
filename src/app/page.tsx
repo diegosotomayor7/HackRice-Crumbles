@@ -48,7 +48,7 @@ export default function Home() {
   return (
     <div className="mx-auto flex h-screen w-full max-w-[430px] flex-col bg-bg">
       {tab === "home" && (
-        <main className="min-h-0 flex-1 overflow-y-auto">
+        <main className="hide-scrollbar min-h-0 flex-1 overflow-y-auto">
           <header className="flex items-center gap-3 px-4 pt-4 pb-2">
             <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-surface">
               <img src="/mascot/avatar.png" alt="" className="h-full w-full object-cover" />
@@ -184,19 +184,19 @@ export default function Home() {
       )}
 
       {tab === "calendar" && (
-        <main className="min-h-0 flex-1 overflow-y-auto p-4">
+        <main className="hide-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
           <Calendar />
         </main>
       )}
 
       {tab === "crumbs" && (
-        <main className="min-h-0 flex-1 overflow-y-auto p-4">
+        <main className="hide-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
           <CrumbStack />
         </main>
       )}
 
       {tab === "profile" && (
-        <main className="min-h-0 flex-1 overflow-y-auto">
+        <main className="hide-scrollbar min-h-0 flex-1 overflow-y-auto">
           <ProfilePage />
         </main>
       )}

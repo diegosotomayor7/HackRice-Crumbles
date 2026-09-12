@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
 import interactionPlugin, { EventResizeDoneArg } from "@fullcalendar/interaction";
-import { DateSelectArg, EventClickArg, EventDropArg } from "@fullcalendar/core";
-import { Plus } from "lucide-react";
+import { DateSelectArg, DatesSetArg, EventClickArg, EventDropArg } from "@fullcalendar/core";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import clsx from "clsx";
 import { useCalendarStore } from "@/lib/store";
 import { CalendarEvent } from "@/types/event";
 import EventModal, { EventDraft } from "./EventModal";
@@ -17,12 +18,26 @@ type ModalState =
   | { mode: "edit"; initial: CalendarEvent }
   | null;
 
+// FullCalendar's own headerToolbar crams nav/title/view-switcher into one row sized for
+// desktop, which overflows on the app's fixed phone-width column. headerToolbar is
+// disabled below and replaced with this custom two-row header instead: arrows+title+today
+// on top, an even full-width view switcher underneath.
+const VIEWS = [
+  { key: "timeGridDay", label: "Day" },
+  { key: "timeGridWeek", label: "Week" },
+  { key: "dayGridMonth", label: "Month" },
+  { key: "listWeek", label: "List" },
+] as const;
+
 export default function Calendar() {
   const events = useCalendarStore((s) => s.events);
   const addEvents = useCalendarStore((s) => s.addEvents);
   const updateEvent = useCalendarStore((s) => s.updateEvent);
   const removeEvent = useCalendarStore((s) => s.removeEvent);
   const [modal, setModal] = useState<ModalState>(null);
+  const calendarRef = useRef<FullCalendar>(null);
+  const [title, setTitle] = useState("");
+  const [view, setView] = useState<string>("timeGridDay");
 
   // Fallback for standalone events with no project color assigned — a soft tan pulled
   // from the same palette as PROJECT_COLORS in api/chat/route.ts.
@@ -69,6 +84,11 @@ export default function Calendar() {
     setModal({ mode: "create", initial: { start: start.toISOString(), end: end.toISOString() } });
   };
 
+  const handleDatesSet = (arg: DatesSetArg) => {
+    setTitle(arg.view.title);
+    setView(arg.view.type);
+  };
+
   const closeModal = () => setModal(null);
 
   const handleSave = (data: EventDraft) => {
@@ -96,15 +116,56 @@ export default function Calendar() {
         </button>
       </div>
 
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              onClick={() => calendarRef.current?.getApi().prev()}
+              aria-label="Previous"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-ink hover:bg-ink/10"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => calendarRef.current?.getApi().next()}
+              aria-label="Next"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-ink hover:bg-ink/10"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          <p className="min-w-0 flex-1 truncate text-center text-sm font-semibold text-ink">{title}</p>
+          <button
+            onClick={() => calendarRef.current?.getApi().today()}
+            className="shrink-0 text-xs font-medium text-ink-muted hover:text-ink"
+          >
+            Today
+          </button>
+        </div>
+
+        <div className="flex gap-1 rounded-lg bg-ink/5 p-1">
+          {VIEWS.map((v) => (
+            <button
+              key={v.key}
+              onClick={() => calendarRef.current?.getApi().changeView(v.key)}
+              className={clsx(
+                "flex-1 rounded-md py-1 text-xs font-medium transition-colors",
+                view === v.key ? "bg-ink text-bg" : "text-ink-muted hover:text-ink"
+              )}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="crumbles-calendar min-h-0 flex-1">
         <FullCalendar
+          ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
           initialView="timeGridDay"
-          headerToolbar={{
-            left: "prev,next today",
-            center: "title",
-            right: "timeGridDay,timeGridWeek,dayGridMonth,listWeek",
-          }}
+          headerToolbar={false}
+          datesSet={handleDatesSet}
           editable
           selectable
           selectMirror
