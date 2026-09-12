@@ -2,6 +2,7 @@
 // reads or writes the store directly, so it stays easy to unit-test and to reuse from
 // other views later.
 
+import { startOfWeek, subWeeks } from "date-fns";
 import { CalendarEvent } from "@/types/event";
 
 export function stepCount(events: CalendarEvent[], projectId: string): number {
@@ -100,4 +101,48 @@ export function nextUpEvent(events: CalendarEvent[], now: Date = new Date()): Ca
   const pending = events.filter((e) => !isDone(e, now));
   if (pending.length === 0) return null;
   return [...pending].sort((a, b) => a.start.localeCompare(b.start))[0];
+}
+
+// Stats for the "My Crumbs" profile page. The week runs Monday-Sunday (matches the
+// design mockup, e.g. "Sep. 1 - Sep. 7" for a week starting on a Monday).
+const WEEK_STARTS_ON = 1;
+
+export type WeeklyStats = {
+  /** Crumbs whose end time has already passed, from this week's Monday through now. */
+  tasksCompleted: number;
+  /** Summed planned duration of those same completed crumbs. */
+  minutesSpent: number;
+  /**
+   * tasksCompleted vs. the same Monday-through-elapsed-time window last week, as a
+   * whole-number percent (e.g. 20 for +20%, -50 for -50%). Null when last week had zero
+   * completed tasks, since a percent change from zero isn't meaningful.
+   */
+  tasksCompletedChangePercent: number | null;
+};
+
+export function weeklyStats(events: CalendarEvent[], now: Date = new Date()): WeeklyStats {
+  const weekStart = startOfWeek(now, { weekStartsOn: WEEK_STARTS_ON });
+  const lastWeekStart = subWeeks(weekStart, 1);
+  // Same amount of the week has elapsed last week as has elapsed so far this week, so the
+  // comparison is apples-to-apples (e.g. "Tue 10am" this week vs. "Tue 10am" last week).
+  const lastWeekSamePoint = new Date(lastWeekStart.getTime() + (now.getTime() - weekStart.getTime()));
+
+  const completedInRange = (rangeStart: Date, rangeEnd: Date) =>
+    events.filter((e) => {
+      const end = new Date(e.end);
+      return end >= rangeStart && end <= rangeEnd;
+    });
+
+  const thisWeekDone = completedInRange(weekStart, now);
+  const lastWeekDone = completedInRange(lastWeekStart, lastWeekSamePoint);
+
+  const tasksCompleted = thisWeekDone.length;
+  const minutesSpent = thisWeekDone.reduce((sum, e) => sum + durationMinutes(e), 0);
+
+  const tasksCompletedChangePercent =
+    lastWeekDone.length === 0
+      ? null
+      : Math.round(((tasksCompleted - lastWeekDone.length) / lastWeekDone.length) * 100);
+
+  return { tasksCompleted, minutesSpent, tasksCompletedChangePercent };
 }

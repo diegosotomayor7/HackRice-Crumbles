@@ -48,7 +48,12 @@ const scheduleTool = {
         items: {
           type: Type.OBJECT,
           properties: {
-            title: { type: Type.STRING, description: "Short, specific, actionable title." },
+            title: {
+              type: Type.STRING,
+              description:
+                "Short, specific, actionable title. At most 48 characters, so it fits on one line " +
+                "(e.g. \"Write and run your first console.log script\").",
+            },
             start: { type: Type.STRING, description: "ISO 8601 datetime, e.g. 2026-09-15T14:00:00" },
             end: { type: Type.STRING, description: "ISO 8601 datetime, must be after start." },
             allDay: { type: Type.BOOLEAN },
@@ -275,7 +280,8 @@ export async function POST(req: NextRequest) {
           `crumbs: single, concrete, physical next actions that take 5-45 minutes and require no further ` +
           `planning or decision-making from the user. A crumb names an observable action ("open the job board ` +
           `and save 3 postings"), never a vague intention ("research internships"). If a crumb still requires ` +
-          `the user to decide something before they can start, it is too big. ` +
+          `the user to decide something before they can start, it is too big. Keep every title to at most 48 ` +
+          `characters so it fits on one line in the UI (e.g. "Write and run your first console.log script"). ` +
           `The current date/time, exactly as shown on the user's own device, is ${nowLabel} (a ${nowDayOfWeek}). ` +
           `Always compute relative dates ("today", "tomorrow", "next week", "in 3 days") from this exact value — ` +
           `"tomorrow" always means the calendar day immediately after ${nowLabel.slice(0, 10)}, never two days later. ` +

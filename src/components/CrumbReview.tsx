@@ -72,40 +72,20 @@ export default function CrumbReview() {
     }
   };
 
-  const insertBetween = async (prev: DraftCrumb, next: DraftCrumb) => {
-    if (draftCrumbs.length >= MAX_DRAFT_CRUMBS) return false;
-    try {
-      const res = await fetch("/api/insert-crumb", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prev: { title: prev.title, start: prev.start, end: prev.end, allDay: prev.allDay, notes: prev.notes },
-          next: { title: next.title, start: next.start, end: next.end, allDay: next.allDay, notes: next.notes },
-          projectTitle: prev.projectTitle ?? next.projectTitle,
-          clientNow: clientNowLabel(),
-        }),
-      });
-      if (!res.ok) return false;
-      const data = (await res.json()) as {
-        crumb?: { title: string; start: string; end: string; allDay?: boolean; notes?: string };
-      };
-      if (!data.crumb) return false;
-      const inserted: DraftCrumb = {
-        id: crypto.randomUUID(),
-        title: data.crumb.title,
-        start: data.crumb.start,
-        end: data.crumb.end,
-        allDay: data.crumb.allDay ?? false,
-        notes: data.crumb.notes,
-        projectId: prev.projectId ?? next.projectId,
-        projectTitle: prev.projectTitle ?? next.projectTitle,
-        color: prev.color ?? next.color,
-        depth: Math.max(prev.depth, next.depth),
-      };
-      return insertDraftCrumb(inserted);
-    } catch {
-      return false;
-    }
+  const insertBetween = (prev: DraftCrumb, next: DraftCrumb, title: string) => {
+    if (new Date(next.start).getTime() <= new Date(prev.end).getTime()) return false;
+    const inserted: DraftCrumb = {
+      id: crypto.randomUUID(),
+      title,
+      start: prev.end,
+      end: next.start,
+      allDay: false,
+      projectId: prev.projectId ?? next.projectId,
+      projectTitle: prev.projectTitle ?? next.projectTitle,
+      color: prev.color ?? next.color,
+      depth: Math.max(prev.depth, next.depth),
+    };
+    return insertDraftCrumb(inserted);
   };
 
   return (
@@ -150,7 +130,7 @@ export default function CrumbReview() {
               <InsertGapButton
                 key={`gap-${prev.id}-${crumb.id}`}
                 disabled={atCap}
-                onInsert={() => insertBetween(prev, crumb)}
+                onInsert={(title) => insertBetween(prev, crumb, title)}
               />
             );
             return [gap, card];

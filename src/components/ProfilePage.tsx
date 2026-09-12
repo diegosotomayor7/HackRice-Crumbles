@@ -1,11 +1,18 @@
 "use client";
 
 import Card from "@/components/ui/Card";
+import { useCalendarStore } from "@/lib/store";
+import { weeklyStats } from "@/lib/selectors";
 
-// Placeholder scaffold — teammate is designing the real layout in Figma.
+// Placeholder scaffold — teammate is designing the real layout in Figma. The numbers
+// below are wired to real data so the layout can be swapped in without redoing the stats.
 const USER_NAME = "User";
 
 export default function ProfilePage() {
+  const events = useCalendarStore((s) => s.events);
+  const stats = weeklyStats(events);
+  const hoursSpent = (stats.minutesSpent / 60).toFixed(1);
+
   return (
     <div className="flex flex-col gap-5 p-4">
       <div className="flex items-center gap-3">
@@ -18,8 +25,24 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <Card className="p-4 text-center text-sm text-ink-muted">
-        Profile page coming soon.
+      <Card className="flex flex-col gap-2 p-4 text-sm text-ink">
+        <div className="flex items-center justify-between">
+          <span className="text-ink-muted">Tasks completed this week</span>
+          <span className="font-semibold">
+            {stats.tasksCompleted}
+            {stats.tasksCompletedChangePercent !== null && (
+              <span className={stats.tasksCompletedChangePercent >= 0 ? "text-emerald-600" : "text-red-500"}>
+                {" "}
+                ({stats.tasksCompletedChangePercent >= 0 ? "+" : ""}
+                {stats.tasksCompletedChangePercent}%)
+              </span>
+            )}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-ink-muted">Hours spent this week</span>
+          <span className="font-semibold">{hoursSpent}</span>
+        </div>
       </Card>
     </div>
   );
