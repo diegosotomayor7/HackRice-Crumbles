@@ -2,7 +2,7 @@
 // reads or writes the store directly, so it stays easy to unit-test and to reuse from
 // other views later.
 
-import { startOfWeek, subWeeks } from "date-fns";
+import { endOfWeek, startOfWeek, subWeeks } from "date-fns";
 import { CalendarEvent } from "@/types/event";
 
 export function stepCount(events: CalendarEvent[], projectId: string): number {
@@ -115,6 +115,9 @@ export function nextUpEvent(events: CalendarEvent[], now: Date = new Date()): Ca
 const WEEK_STARTS_ON = 1;
 
 export type WeeklyStats = {
+  /** Start/end of the current Monday-Sunday week, for display (e.g. "Sep 1 - Sep 7"). */
+  weekStart: Date;
+  weekEnd: Date;
   /** Crumbs whose end time has already passed, from this week's Monday through now. */
   tasksCompleted: number;
   /** Summed planned duration of those same completed crumbs. */
@@ -125,10 +128,27 @@ export type WeeklyStats = {
    * completed tasks, since a percent change from zero isn't meaningful.
    */
   tasksCompletedChangePercent: number | null;
+  /**
+   * Overall percent of all crumbs-with-a-project that are done as of now, minus that same
+   * percent as of the equivalent point last week — a percentage-point swing (e.g. 20 for
+   * "your projects are 20 points further along than at this point last week").
+   */
+  longtermProgressChangePercent: number;
 };
+
+// Percent of all project crumbs done as of a given moment — isDone is itself just
+// `end < asOf`, so evaluating it at two different moments gives a real before/after
+// comparison without needing a separate "completed at" timestamp on each crumb.
+function overallProgressPercent(events: CalendarEvent[], asOf: Date): number {
+  const withProject = events.filter((e) => e.projectId);
+  if (withProject.length === 0) return 0;
+  const done = withProject.filter((e) => isDone(e, asOf)).length;
+  return Math.round((done / withProject.length) * 100);
+}
 
 export function weeklyStats(events: CalendarEvent[], now: Date = new Date()): WeeklyStats {
   const weekStart = startOfWeek(now, { weekStartsOn: WEEK_STARTS_ON });
+  const weekEnd = endOfWeek(now, { weekStartsOn: WEEK_STARTS_ON });
   const lastWeekStart = subWeeks(weekStart, 1);
   // Same amount of the week has elapsed last week as has elapsed so far this week, so the
   // comparison is apples-to-apples (e.g. "Tue 10am" this week vs. "Tue 10am" last week).
@@ -151,5 +171,15 @@ export function weeklyStats(events: CalendarEvent[], now: Date = new Date()): We
       ? null
       : Math.round(((tasksCompleted - lastWeekDone.length) / lastWeekDone.length) * 100);
 
-  return { tasksCompleted, minutesSpent, tasksCompletedChangePercent };
+  const longtermProgressChangePercent =
+    overallProgressPercent(events, now) - overallProgressPercent(events, lastWeekSamePoint);
+
+  return {
+    weekStart,
+    weekEnd,
+    tasksCompleted,
+    minutesSpent,
+    tasksCompletedChangePercent,
+    longtermProgressChangePercent,
+  };
 }

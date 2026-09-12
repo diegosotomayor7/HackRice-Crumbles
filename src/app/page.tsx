@@ -19,6 +19,19 @@ import { durationMinutes, longtermGoals, nextUpEvent, projectsToday, stepCount }
 // FullCalendar touches window/document — load client-side only.
 const Calendar = dynamic(() => import("@/components/Calendar"), { ssr: false });
 
+// A different cookie per longterm goal card (cycling if there are more goals than icons),
+// pulled from "UI for crumble/Assets" so each goal reads as visually distinct.
+const GOAL_ICONS = [
+  "/mascot/goal-icon-1.png",
+  "/mascot/goal-icon-2.png",
+  "/mascot/goal-icon-3.png",
+  "/mascot/goal-icon-4.png",
+  "/mascot/goal-icon-5.png",
+  "/mascot/goal-icon-6.png",
+  "/mascot/goal-icon-7.png",
+  "/mascot/goal-icon-8.png",
+];
+
 type Tab = "home" | "calendar" | "crumbs" | "profile";
 
 // Design placeholder until accounts exist.
@@ -161,7 +174,7 @@ export default function Home() {
                         <div className="flex items-center justify-between">
                           <PlayCircle className="h-9 w-9 text-accent-deep" strokeWidth={1.5} />
                           <img
-                            src={i % 2 === 0 ? "/mascot/goal-1.png" : "/mascot/goal-2.png"}
+                            src={GOAL_ICONS[i % GOAL_ICONS.length]}
                             alt=""
                             className="h-11 w-11 object-contain"
                           />
