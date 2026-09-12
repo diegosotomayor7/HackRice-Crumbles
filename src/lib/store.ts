@@ -45,7 +45,7 @@ export const useCalendarStore = create<CalendarState>()(
         }),
     }),
     {
-      name: "flux-calendar-storage", // localStorage key — keeps the demo state across refreshes
+      name: "crumbles-storage", // localStorage key — keeps the demo state across refreshes
     }
   )
 );

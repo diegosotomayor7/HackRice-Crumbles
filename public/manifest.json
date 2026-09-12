@@ -1,7 +1,7 @@
 {
-  "name": "Flux — AI-native calendar",
-  "short_name": "Flux",
-  "description": "The calendar that plans for you.",
+  "name": "Crumbles",
+  "short_name": "Crumbles",
+  "description": "Convert intentions to actions.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f8fafc",

@@ -85,7 +85,7 @@ export default function ChatPanel() {
     <div className="flex h-full flex-col rounded-xl border border-black/10 bg-white shadow-sm dark:border-white/10 dark:bg-neutral-900">
       <div className="flex items-center gap-2 border-b border-black/10 p-3 dark:border-white/10">
         <Sparkles className="h-4 w-4 text-indigo-500" />
-        <span className="font-medium">Flux Assistant</span>
+        <span className="font-medium">Crumbles</span>
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto p-3">
