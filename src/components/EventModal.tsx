@@ -71,7 +71,8 @@ export default function EventModal({ mode, initial, onSave, onDelete, onClose }:
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-card border border-ink/10 bg-surface p-4 shadow-xl"
+        className="w-full max-w-sm rounded-card border border-ink/10 p-4 shadow-xl"
+        style={{ backgroundColor: color }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
