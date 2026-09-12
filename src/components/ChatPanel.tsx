@@ -30,7 +30,6 @@ export default function ChatPanel({ onClose }: { onClose?: () => void }) {
   const session = useCalendarStore((s) => (s.activeSessionId ? s.sessions[s.activeSessionId] : undefined));
   const messages = session?.messages ?? [];
   const addMessage = useCalendarStore((s) => s.addMessage);
-  const linkSessionToProject = useCalendarStore((s) => s.linkSessionToProject);
   const addEvents = useCalendarStore((s) => s.addEvents);
   const startReview = useCalendarStore((s) => s.startReview);
   const events = useCalendarStore((s) => s.events);
@@ -124,10 +123,6 @@ export default function ChatPanel({ onClose }: { onClose?: () => void }) {
         depth: 0,
       }));
       startReview(crumbs);
-      // Link this chat to the goal it just produced so its "Longterm goals" card can
-      // reopen this exact conversation instead of starting a fresh one next time.
-      const projectId = crumbs[0].projectId;
-      if (projectId) linkSessionToProject(activeSessionId!, projectId, crumbs[0].projectTitle ?? projectId);
       // The review stack takes over full-screen — close the chat underneath it so
       // dismissing the review lands back on the main crumb stack, not the chat.
       onClose?.();
@@ -287,9 +282,7 @@ export default function ChatPanel({ onClose }: { onClose?: () => void }) {
     <div className="flex h-full flex-col bg-bg">
       <div className="flex items-center gap-2 border-b border-ink/10 p-3">
         <Sparkles className="h-4 w-4 shrink-0 text-tan" />
-        <span className="font-heading flex-1 truncate font-medium text-ink">
-          {session?.projectId ? session.title : "Crumbles"}
-        </span>
+        <span className="font-heading flex-1 truncate font-medium text-ink">Crumbles</span>
         {onClose && (
           <button
             onClick={onClose}

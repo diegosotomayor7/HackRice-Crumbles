@@ -7,6 +7,7 @@ import { Bell, ChevronsRight, PlayCircle } from "lucide-react";
 import ChatPanel from "@/components/ChatPanel";
 import CrumbStack from "@/components/CrumbStack";
 import CrumbReview from "@/components/CrumbReview";
+import ExecutionScreen from "@/components/ExecutionScreen";
 import ProfilePage from "@/components/ProfilePage";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -48,11 +49,11 @@ function greeting(date: Date) {
 export default function Home() {
   const [tab, setTab] = useState<Tab>("home");
   const [chatOpen, setChatOpen] = useState(false);
+  const [executionProjectId, setExecutionProjectId] = useState<string | null>(null);
 
   const events = useCalendarStore((s) => s.events);
   const reviewActive = useCalendarStore((s) => s.reviewActive);
   const startNewSession = useCalendarStore((s) => s.startNewSession);
-  const openProjectSession = useCalendarStore((s) => s.openProjectSession);
 
   const next = useMemo(() => nextUpEvent(events), [events]);
   const today = useMemo(() => projectsToday(events), [events]);
@@ -109,7 +110,10 @@ export default function Home() {
                     </p>
                   </div>
                   <div className="flex items-end justify-between">
-                    <Button variant="outline" onClick={() => setTab("crumbs")}>
+                    <Button
+                      variant="outline"
+                      onClick={() => (next.projectId ? setExecutionProjectId(next.projectId) : setTab("crumbs"))}
+                    >
                       Crumb it!
                     </Button>
                     <p className="mr-4 text-xs text-black/60">Time ~{durationMinutes(next)}min</p>
@@ -163,11 +167,8 @@ export default function Home() {
                   longterm.map((g, i) => (
                     <button
                       key={g.projectId}
-                      onClick={() => {
-                        openProjectSession(g.projectId, g.projectTitle);
-                        setChatOpen(true);
-                      }}
-                      className="text-left"
+                      onClick={() => setExecutionProjectId(g.projectId)}
+                      className={clsx("text-left", g.percent >= 100 && "opacity-50")}
                     >
                       <Card className="flex flex-col gap-2 border-black bg-gradient-to-b from-bg to-accent p-3">
                         <div className="flex items-center justify-between">
@@ -180,7 +181,9 @@ export default function Home() {
                         </div>
                         <div>
                           <p className="truncate text-sm font-bold text-black">{g.projectTitle}</p>
-                          <p className="text-xs font-light text-black/60">Next step · {g.nextStepMinutes} min</p>
+                          <p className="text-xs font-light text-black/60">
+                            {g.percent >= 100 ? "All steps done" : `Next step · ${g.nextStepMinutes} min`}
+                          </p>
                         </div>
                       </Card>
                     </button>
@@ -250,6 +253,10 @@ export default function Home() {
       {/* Full-screen takeover: swiping through a goal's crumbs replaces the whole app
           until the user commits them (or discards) — see CrumbReview for why. */}
       {reviewActive && <CrumbReview />}
+
+      {executionProjectId && (
+        <ExecutionScreen projectId={executionProjectId} onExit={() => setExecutionProjectId(null)} />
+      )}
     </div>
   );
 }

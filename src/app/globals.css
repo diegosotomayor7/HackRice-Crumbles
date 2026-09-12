@@ -47,6 +47,16 @@ body {
   background-color: color-mix(in srgb, var(--color-accent) 25%, white) !important;
 }
 
+/* Steps marked done/skipped in ExecutionScreen (see Calendar.tsx) stay on the calendar as
+   a record, but read as finished rather than still-to-do. */
+.crumbles-calendar .crumb-task-done {
+  opacity: 0.4;
+}
+
+.crumbles-calendar .crumb-task-done .fc-event-title {
+  text-decoration: line-through;
+}
+
 /* Scrollable panes still scroll fine via touch/wheel — this just hides the browser's own
    scrollbar so it doesn't look like a bulky desktop-chrome leftover on what's otherwise a
    phone-styled UI. Covers the app's own overflow-y-auto containers, plus FullCalendar's
