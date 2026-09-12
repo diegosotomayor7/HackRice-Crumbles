@@ -1,12 +1,14 @@
 @import "tailwindcss";
 
+/* Official palette — see "UI for crumble/Color Code.txt": Oat, Sprout, Cookie, Choco, Crumb. */
 :root {
-  --color-bg: #f1eadc;
-  --color-surface: #eed3a1;
-  --color-ink: #64422b;
+  --color-bg: #f8f4ea; /* Oat */
+  --color-surface: #fad9a2; /* Crumb */
+  --color-ink: #6b3f24; /* Choco */
   --color-ink-muted: color-mix(in srgb, var(--color-ink) 60%, transparent);
-  --color-accent: #ddf679;
-  --color-tan: #e2b06b;
+  --color-accent: #d7ff5b; /* Sprout / Acid Green */
+  --color-accent-deep: #8fb52e;
+  --color-tan: #f4b35e; /* Cookie */
   --radius-card: 1.25rem;
   --shadow-card: 0 4px 20px -6px color-mix(in srgb, var(--color-ink) 25%, transparent);
 }
@@ -17,6 +19,7 @@
   --color-ink: var(--color-ink);
   --color-ink-muted: var(--color-ink-muted);
   --color-accent: var(--color-accent);
+  --color-accent-deep: var(--color-accent-deep);
   --color-tan: var(--color-tan);
   --radius-card: var(--radius-card);
   --shadow-card: var(--shadow-card);

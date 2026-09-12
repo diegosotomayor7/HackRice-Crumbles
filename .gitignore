@@ -43,3 +43,7 @@ yarn-error.log*
 next-env.d.ts
 
 .cc-history
+
+# Standalone Figma Make export (its own Vite app/lockfile) used only as a design
+# reference — implemented into src/, not meant to be committed as its own project.
+/UI for crumble/Homepage UI/
