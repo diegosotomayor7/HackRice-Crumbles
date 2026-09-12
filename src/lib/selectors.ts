@@ -136,13 +136,18 @@ export type WeeklyStats = {
   longtermProgressChangePercent: number;
 };
 
-// Percent of all project crumbs done as of a given moment — isDone is itself just
-// `end < asOf`, so evaluating it at two different moments gives a real before/after
-// comparison without needing a separate "completed at" timestamp on each crumb.
-function overallProgressPercent(events: CalendarEvent[], asOf: Date): number {
+// Percent of all project crumbs done as of a given moment. `isDone` is status-aware (a
+// crumb marked done stays done regardless of what moment you ask about), so it's only
+// correct for `asOf === now`. For any earlier moment there's no recorded "completed at"
+// time to check status against, so fall back to the old pure-schedule proxy: was its
+// end time already in the past at that moment. Without this split, a crumb finished
+// today would count as "already done last week" too, and silently erase its own
+// contribution to the week-over-week change below.
+function overallProgressPercent(events: CalendarEvent[], asOf: Date, now: Date): number {
   const withProject = events.filter((e) => e.projectId);
   if (withProject.length === 0) return 0;
-  const done = withProject.filter((e) => isDone(e, asOf)).length;
+  const wasDone = (e: CalendarEvent) => (asOf.getTime() >= now.getTime() ? isDone(e, asOf) : new Date(e.end) < asOf);
+  const done = withProject.filter(wasDone).length;
   return Math.round((done / withProject.length) * 100);
 }
 
@@ -172,7 +177,7 @@ export function weeklyStats(events: CalendarEvent[], now: Date = new Date()): We
       : Math.round(((tasksCompleted - lastWeekDone.length) / lastWeekDone.length) * 100);
 
   const longtermProgressChangePercent =
-    overallProgressPercent(events, now) - overallProgressPercent(events, lastWeekSamePoint);
+    overallProgressPercent(events, now, now) - overallProgressPercent(events, lastWeekSamePoint, now);
 
   return {
     weekStart,

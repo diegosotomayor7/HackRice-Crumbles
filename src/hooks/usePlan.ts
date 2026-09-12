@@ -18,7 +18,7 @@ export type Plan = {
   deleteTasks: (ids: string[]) => string;
   splitTask: (id: string, into: TaskInput[]) => string;
   reorderTasks: (orderedIds: string[]) => string;
-  setTaskStatus: (id: string, status: "pending" | "done" | "skipped") => void;
+  setTaskStatus: (id: string, status: "pending" | "done") => void;
 };
 
 export function usePlan(projectId: string): Plan {

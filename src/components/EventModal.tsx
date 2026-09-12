@@ -125,7 +125,7 @@ export default function EventModal({ mode, initial, onSave, onDelete, onClose }:
             <div>
               <span className="mb-1 block text-xs text-ink-muted">Status</span>
               <div className="flex gap-1.5">
-                {(["pending", "done", "skipped"] as const).map((s) => (
+                {(["pending", "done"] as const).map((s) => (
                   <button
                     key={s}
                     onClick={() => setStatus(s)}

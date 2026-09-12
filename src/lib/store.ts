@@ -66,7 +66,7 @@ type CalendarState = {
   deleteTasks: (ids: string[]) => string;
   splitTask: (id: string, into: TaskInput[]) => string;
   reorderTasks: (projectId: string, orderedIds: string[]) => string;
-  setTaskStatus: (id: string, status: "pending" | "done" | "skipped") => void;
+  setTaskStatus: (id: string, status: "pending" | "done") => void;
 };
 
 export const useCalendarStore = create<CalendarState>()(

@@ -34,7 +34,7 @@ export default function ExecutionScreen({ projectId, onExit }: { projectId: stri
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan.tasks.map((t) => t.id).join(",")]);
 
-  const pendingTasks = plan.tasks.filter((t) => t.status !== "done" && t.status !== "skipped");
+  const pendingTasks = plan.tasks.filter((t) => t.status !== "done");
   const doneCount = plan.tasks.length - pendingTasks.length;
   const current = pendingTasks[0];
   const upcoming = pendingTasks.slice(1, 3);
