@@ -58,3 +58,45 @@ body {
 .crumbles-calendar .fc-header-toolbar {
   margin-bottom: 0.5rem;
 }
+
+/* FullCalendar's default theme is Bootstrap blue — recolor the toolbar buttons to the
+   app's own ink/brown, and the calendar surface to white instead of the tan card color
+   it was inheriting from the surrounding container. */
+.crumbles-calendar {
+  background-color: #fff;
+  border-radius: var(--radius-card);
+}
+
+.crumbles-calendar .fc-button-primary {
+  background-color: color-mix(in srgb, var(--color-ink) 75%, white 25%);
+  border-color: color-mix(in srgb, var(--color-ink) 75%, white 25%);
+  color: #fff;
+}
+
+.crumbles-calendar .fc-button-primary:hover:not(:disabled) {
+  background-color: var(--color-ink);
+  border-color: var(--color-ink);
+}
+
+.crumbles-calendar .fc-button-primary:disabled {
+  background-color: color-mix(in srgb, var(--color-ink) 45%, transparent);
+  border-color: color-mix(in srgb, var(--color-ink) 45%, transparent);
+}
+
+.crumbles-calendar .fc-button-primary:not(:disabled).fc-button-active,
+.crumbles-calendar .fc-button-primary:not(:disabled):active {
+  background-color: var(--color-tan);
+  border-color: var(--color-tan);
+  color: var(--color-ink);
+}
+
+.crumbles-calendar .fc-button:focus,
+.crumbles-calendar .fc-button-primary:not(:disabled).fc-button-active:focus {
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--color-ink) 35%, transparent);
+}
+
+/* The default "today" cell highlight is also FullCalendar blue — soften it to a pale
+   tint of the app's accent instead. */
+.crumbles-calendar .fc-day-today {
+  background-color: color-mix(in srgb, var(--color-accent) 25%, white) !important;
+}
