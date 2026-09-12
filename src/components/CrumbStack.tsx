@@ -15,7 +15,7 @@ export default function CrumbStack() {
   const upcoming = [...events]
     .filter((e) => new Date(e.end) >= new Date())
     .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-    .slice(0, 3);
+    .slice(0, 6);
 
   if (upcoming.length === 0) {
     return (

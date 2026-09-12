@@ -35,6 +35,7 @@ export default function EventModal({ mode, initial, onSave, onDelete, onClose }:
   const [allDay, setAllDay] = useState(initial.allDay ?? false);
   const [notes, setNotes] = useState(initial.notes ?? "");
   const [color, setColor] = useState(initial.color ?? COLOR_OPTIONS[0]);
+  const [status, setStatus] = useState<CalendarEvent["status"]>(initial.status ?? "pending");
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -59,6 +60,8 @@ export default function EventModal({ mode, initial, onSave, onDelete, onClose }:
       color,
       projectId: initial.projectId,
       projectTitle: initial.projectTitle,
+      status: initial.projectId ? status : initial.status,
+      order: initial.order,
     });
   };
 
@@ -112,6 +115,30 @@ export default function EventModal({ mode, initial, onSave, onDelete, onClose }:
             <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
             All day
           </label>
+
+          {/* Only steps that belong to a goal have execution status — a plain calendar
+              event has nothing for ExecutionScreen's progress bar to track. Writes the
+              same `status` field ExecutionScreen's swipe gesture sets, so either path
+              keeps Today's Plan's progress in sync. */}
+          {initial.projectId && (
+            <div>
+              <span className="mb-1 block text-xs text-ink-muted">Status</span>
+              <div className="flex gap-1.5">
+                {(["pending", "done", "skipped"] as const).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setStatus(s)}
+                    className={
+                      "flex-1 rounded-md border px-2 py-1.5 text-xs font-medium capitalize transition-colors " +
+                      (status === s ? "border-ink bg-ink text-bg" : "border-ink/20 text-ink hover:bg-ink/5")
+                    }
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <textarea
             value={notes}

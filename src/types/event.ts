@@ -15,6 +15,11 @@ export type CalendarEvent = {
   projectId?: string;
   projectTitle?: string;
   notes?: string;
+  /** Execution state within its project. Undefined is treated as "pending" — only
+   * ExecutionScreen reads/writes this, so events outside a project never need it. */
+  status?: "pending" | "done" | "skipped";
+  /** Position within its project's step list. Undefined falls back to start-time order. */
+  order?: number;
 };
 
 export type ChatMessage = {
@@ -28,13 +33,11 @@ export type ChatMessage = {
   kind?: "clarify";
 };
 
-// One chat conversation. `projectId` links a session to the goal it produced (matches
-// CalendarEvent#projectId, itself the AI's projectTitle) so the "Longterm goals" card for
-// that goal can reopen this exact conversation instead of starting a new one. Sessions
-// with no projectId are ad-hoc chats — e.g. one that hasn't produced a goal breakdown yet.
+// One intake chat conversation. Only used while a goal is being broken down into its
+// initial crumbs (see CrumbReview) — once committed, "Longterm goals" opens ExecutionScreen
+// directly, not this conversation, so a session is never reopened after its goal exists.
 export type ChatSession = {
   id: string;
-  projectId?: string;
   title: string;
   messages: ChatMessage[];
   createdAt: string;

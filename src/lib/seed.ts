@@ -29,5 +29,43 @@ export function seedEvents(): CalendarEvent[] {
       end: at(1, 8, 30),
       color: "#22c55e",
     },
+    // A ready-to-go "Laundry" plan so ExecutionScreen has something to demo instantly,
+    // without going through intake chat first.
+    ...laundryPlan(at),
   ];
+}
+
+function laundryPlan(at: (dayOffset: number, hour: number, minute?: number) => string): CalendarEvent[] {
+  const projectId = "laundry";
+  const projectTitle = "Laundry";
+  const color = "#fadfb0";
+  const steps: { title: string; minutes: number }[] = [
+    { title: "Sort darks from lights", minutes: 10 },
+    { title: "Load washer and start it", minutes: 10 },
+    { title: "Move wet clothes to dryer", minutes: 10 },
+    { title: "Fold and put away clothes", minutes: 20 },
+  ];
+  let hour = 18;
+  let minute = 0;
+  return steps.map((step, i) => {
+    const start = at(0, hour, minute);
+    minute += step.minutes;
+    if (minute >= 60) {
+      hour += Math.floor(minute / 60);
+      minute %= 60;
+    }
+    const end = at(0, hour, minute);
+    return {
+      id: `seed-laundry-${i}`,
+      title: step.title,
+      start,
+      end,
+      allDay: false,
+      color,
+      projectId,
+      projectTitle,
+      status: "pending",
+      order: i,
+    };
+  });
 }

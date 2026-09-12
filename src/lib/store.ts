@@ -4,6 +4,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { CalendarEvent, ChatMessage, ChatSession, DraftCrumb } from "@/types/event";
 import { seedEvents } from "./seed";
+import * as plan from "./plan";
+import type { TaskInput } from "./plan";
 
 // Hard cap on how many cards can be staged for review at once — applies to the AI's
 // initial breakdown, every further split (+1 net card each time), and every inserted gap-filler.
@@ -24,16 +26,12 @@ type CalendarState = {
   removeEvent: (id: string) => void;
   resetDemoData: () => void;
 
-  // Each chat conversation lives in its own session so a goal's history can be revisited
-  // later (e.g. from its "Longterm goals" card) instead of all chats sharing one thread.
+  // Each intake conversation lives in its own session, but sessions are never reopened —
+  // once a goal exists, "Longterm goals" opens ExecutionScreen, not the chat that made it.
   sessions: Record<string, ChatSession>;
   activeSessionId: string | null;
-  /** Start a brand-new, unlinked chat session and make it active. Returns its id. */
+  /** Start a brand-new chat session and make it active. Returns its id. */
   startNewSession: () => string;
-  /** Open the session already linked to this project, or create one if none exists yet. */
-  openProjectSession: (projectId: string, projectTitle: string) => string;
-  /** Link a session to the project its conversation just produced (e.g. after a goal breakdown). */
-  linkSessionToProject: (sessionId: string, projectId: string, projectTitle: string) => void;
   addMessage: (sessionId: string, message: ChatMessage) => void;
 
   // Staging stack for the swipe-to-refine review screen. Nothing here is a real
@@ -53,6 +51,22 @@ type CalendarState = {
   commitAllDraftCrumbs: () => void;
   /** Discard the whole staging stack without adding anything to the calendar. */
   discardReview: () => void;
+
+  // ExecutionScreen's agent tools. Each mutates the `events` belonging to one project and
+  // returns a short human summary for the ephemeral line above the input bar (see lib/plan.ts
+  // for the actual reducer logic — these are thin wrappers so components never touch it raw).
+  addTasks: (
+    projectId: string,
+    projectTitle: string,
+    color: string | undefined,
+    tasks: TaskInput[],
+    afterTaskId?: string
+  ) => string;
+  updateTask: (id: string, patch: { title?: string; detail?: string; estimateMinutes?: number }) => string;
+  deleteTasks: (ids: string[]) => string;
+  splitTask: (id: string, into: TaskInput[]) => string;
+  reorderTasks: (projectId: string, orderedIds: string[]) => string;
+  setTaskStatus: (id: string, status: "pending" | "done" | "skipped") => void;
 };
 
 export const useCalendarStore = create<CalendarState>()(
@@ -84,34 +98,6 @@ export const useCalendarStore = create<CalendarState>()(
         }));
         return id;
       },
-      openProjectSession: (projectId, projectTitle) => {
-        const existing = Object.values(get().sessions).find((s) => s.projectId === projectId);
-        if (existing) {
-          set({ activeSessionId: existing.id });
-          return existing.id;
-        }
-        const id = crypto.randomUUID();
-        const session: ChatSession = {
-          id,
-          projectId,
-          title: projectTitle,
-          messages: [welcomeMessage(`Let's keep working on "${projectTitle}".`)],
-          createdAt: new Date().toISOString(),
-        };
-        set((state) => ({
-          sessions: { ...state.sessions, [id]: session },
-          activeSessionId: id,
-        }));
-        return id;
-      },
-      linkSessionToProject: (sessionId, projectId, projectTitle) =>
-        set((state) => {
-          const session = state.sessions[sessionId];
-          if (!session) return state;
-          return {
-            sessions: { ...state.sessions, [sessionId]: { ...session, projectId, title: projectTitle } },
-          };
-        }),
       addMessage: (sessionId, message) =>
         set((state) => {
           const session = state.sessions[sessionId];
@@ -167,6 +153,33 @@ export const useCalendarStore = create<CalendarState>()(
           reviewActive: false,
         })),
       discardReview: () => set({ draftCrumbs: [], reviewActive: false }),
+
+      addTasks: (projectId, projectTitle, color, tasks, afterTaskId) => {
+        const result = plan.addTasks(get().events, projectId, projectTitle, color, tasks, afterTaskId);
+        set({ events: result.events });
+        return result.summary;
+      },
+      updateTask: (id, patch) => {
+        const result = plan.updateTask(get().events, id, patch);
+        set({ events: result.events });
+        return result.summary;
+      },
+      deleteTasks: (ids) => {
+        const result = plan.deleteTasks(get().events, ids);
+        set({ events: result.events });
+        return result.summary;
+      },
+      splitTask: (id, into) => {
+        const result = plan.splitTask(get().events, id, into);
+        set({ events: result.events });
+        return result.summary;
+      },
+      reorderTasks: (projectId, orderedIds) => {
+        const result = plan.reorderTasks(get().events, projectId, orderedIds);
+        set({ events: result.events });
+        return result.summary;
+      },
+      setTaskStatus: (id, status) => set((state) => ({ events: plan.setTaskStatus(state.events, id, status) })),
     }),
     {
       name: "crumbles-storage", // localStorage key — keeps the demo state across refreshes

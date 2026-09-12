@@ -14,9 +14,12 @@ export function durationMinutes(event: Pick<CalendarEvent, "start" | "end">): nu
   return Math.max(0, Math.round(ms / 60000 / 5) * 5);
 }
 
-// CalendarEvent has no `status` field, so a crumb counts as "done" once its end time
-// has passed — the same cutoff CrumbStack already uses to decide what's "upcoming".
+// Prefer the explicit status ExecutionScreen sets (swipe right -> "done", the user's own
+// call) over elapsed time. Events with no status (plain calendar events never touched by
+// ExecutionScreen) fall back to the old time-based heuristic — the cutoff CrumbStack
+// already uses to decide what's "upcoming".
 export function isDone(event: CalendarEvent, now: Date = new Date()): boolean {
+  if (event.status) return event.status === "done";
   return new Date(event.end) < now;
 }
 
@@ -72,6 +75,8 @@ export type LongtermGoal = {
   projectId: string;
   projectTitle: string;
   nextStepMinutes: number;
+  /** Share of this goal's steps marked done, 0-100 — lets the Home card fade once it hits 100. */
+  percent: number;
 };
 
 // Every project not already covered by Today's Plan lands here — including one whose
@@ -87,10 +92,12 @@ export function longtermGoals(events: CalendarEvent[], now: Date = new Date()): 
     // Prefer the next crumb still to do; fall back to the last one so a fully-done
     // project still shows something rather than disappearing entirely.
     const next = sorted.find((e) => !isDone(e, now)) ?? sorted[sorted.length - 1];
+    const done = sorted.filter((e) => isDone(e, now)).length;
     goals.push({
       projectId,
       projectTitle: next.projectTitle ?? next.title,
       nextStepMinutes: durationMinutes(next),
+      percent: Math.round((done / sorted.length) * 100),
     });
   }
   return goals.reverse();
