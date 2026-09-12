@@ -24,14 +24,20 @@ export default function Calendar() {
   const removeEvent = useCalendarStore((s) => s.removeEvent);
   const [modal, setModal] = useState<ModalState>(null);
 
+  // Fallback for standalone events with no project color assigned — a soft tan pulled
+  // from the same palette as PROJECT_COLORS in api/chat/route.ts.
+  const FALLBACK_EVENT_COLOR = "#f6c98a";
+
   const fcEvents = events.map((e) => ({
     id: e.id,
     title: e.title,
     start: e.start,
     end: e.end,
     allDay: e.allDay,
-    backgroundColor: e.color ?? "#6366f1",
-    borderColor: e.color ?? "#6366f1",
+    backgroundColor: e.color ?? FALLBACK_EVENT_COLOR,
+    borderColor: e.color ?? FALLBACK_EVENT_COLOR,
+    // Soft pastel backgrounds read poorly with FullCalendar's default white event text.
+    textColor: "#6b3f24",
   }));
 
   const handleDrop = (arg: EventDropArg) => {
@@ -80,7 +86,7 @@ export default function Calendar() {
   };
 
   return (
-    <div className="rounded-card border border-ink/10 bg-surface shadow-card flex h-full flex-col gap-2 p-3">
+    <div className="rounded-card border border-ink/10 bg-bg shadow-card flex h-full flex-col gap-2 p-3">
       <div className="flex justify-end">
         <button
           onClick={handleNewEventClick}

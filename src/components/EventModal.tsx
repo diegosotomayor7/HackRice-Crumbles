@@ -5,7 +5,10 @@ import { format, parseISO } from "date-fns";
 import { Trash2, X } from "lucide-react";
 import { CalendarEvent } from "@/types/event";
 
-const COLOR_OPTIONS = ["#6366f1", "#0ea5e9", "#22c55e", "#f97316", "#ec4899", "#a855f7", "#64748b"];
+// Softened tints of the app's own palette (see "UI for crumble/Color Code.txt"), matching
+// the colors PROJECT_COLORS in api/chat/route.ts assigns to AI-generated events, plus a
+// neutral greige for events with no particular project color.
+const COLOR_OPTIONS = ["#e4f7a3", "#f6c98a", "#b79a82", "#fadfb0", "#ede28f", "#d9b896", "#cbbba8"];
 
 export type EventDraft = Omit<CalendarEvent, "id"> & { id?: string };
 

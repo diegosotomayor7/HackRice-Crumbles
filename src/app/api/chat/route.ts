@@ -160,7 +160,17 @@ async function classifyGoal(
   }
 }
 
-const PROJECT_COLORS = ["#6366f1", "#0ea5e9", "#22c55e", "#f97316", "#ec4899", "#a855f7"];
+// Softened tints of the app's own palette (see "UI for crumble/Color Code.txt": Oat,
+// Sprout, Cookie, Choco, Crumb) instead of arbitrary generic colors, so events read as
+// part of the same brand rather than a default chart palette.
+const PROJECT_COLORS = [
+  "#e4f7a3", // soft Sprout
+  "#f6c98a", // soft Cookie
+  "#b79a82", // soft Choco
+  "#fadfb0", // soft Crumb
+  "#ede28f", // soft Sprout/Cookie blend
+  "#d9b896", // soft Choco/Crumb blend
+];
 
 export async function POST(req: NextRequest) {
   const { message, history, clientNow, existingEvents, forceBreakdown } = (await req.json()) as {
