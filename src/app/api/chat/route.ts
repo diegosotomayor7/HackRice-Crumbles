@@ -52,9 +52,11 @@ const scheduleTool = {
 const PROJECT_COLORS = ["#6366f1", "#0ea5e9", "#22c55e", "#f97316", "#ec4899", "#a855f7"];
 
 export async function POST(req: NextRequest) {
-  const { message, history } = (await req.json()) as {
+  const { message, history, clientNow, existingEvents } = (await req.json()) as {
     message: string;
     history: { role: "user" | "assistant"; content: string }[];
+    clientNow?: string;
+    existingEvents?: { title: string; start: string; end: string; allDay?: boolean }[];
   };
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -67,7 +69,18 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const now = new Date();
+  // Trust the client's wall-clock time over the server's — they can be in different
+  // timezones, and "tomorrow"/"next week" must resolve against the user's own clock
+  // (the one they see in the calendar UI), not wherever this process happens to run.
+  const nowLabel = clientNow ?? new Date().toISOString().slice(0, 19);
+  const nowDayOfWeek = new Date(nowLabel).toLocaleDateString("en-US", { weekday: "long" });
+
+  const existingEventsList =
+    existingEvents && existingEvents.length > 0
+      ? existingEvents
+          .map((e) => `- "${e.title}": ${e.start} to ${e.end}${e.allDay ? " (all day)" : ""}`)
+          .join("\n")
+      : "(none)";
 
   const ai = new GoogleGenAI({ apiKey });
 
@@ -86,13 +99,35 @@ export async function POST(req: NextRequest) {
       config: {
         systemInstruction:
           `You are Flux, an AI scheduling assistant embedded in a calendar app. ` +
-          `The current date/time is ${now.toISOString()} (use this for anything relative like "tomorrow" or "next week"). ` +
+          `The current date/time, exactly as shown on the user's own device, is ${nowLabel} (a ${nowDayOfWeek}). ` +
+          `Always compute relative dates ("today", "tomorrow", "next week", "in 3 days") from this exact value — ` +
+          `"tomorrow" always means the calendar day immediately after ${nowLabel.slice(0, 10)}, never two days later. ` +
+          `Do not use any other notion of the current date. ` +
+          `Write every start/end as a naive local datetime with NO timezone suffix (no "Z", no offset), in the ` +
+          `same format as the current date/time above, e.g. 2026-09-15T14:00:00. ` +
+          `Always set allDay explicitly (true or false) on every event. ` +
+          `Never make an event span an entire day (00:00 to 00:00/23:59, or a 24-hour block) unless allDay is true ` +
+          `and the task is genuinely a full-day thing (e.g. "vacation", "conference") — ordinary tasks get a ` +
+          `specific, realistic start time and a duration that matches the work (typically 15 minutes to 3 hours), ` +
+          `scheduled within reasonable waking/working hours (roughly 8am-9pm) unless the user says otherwise. ` +
+          `\n\n` +
+          `Existing events already on the calendar (both user-created and from earlier AI replies):\n${existingEventsList}\n` +
+          `New events you create must NOT overlap each other, and must NOT overlap any existing event listed above — ` +
+          `pick different times/days instead. Overlaps are only ever acceptable if the user explicitly asks for two ` +
+          `things at the same time.` +
+          `\n\n` +
           `Always respond by calling schedule_calendar_events. ` +
           `If the user describes ONE concrete thing to schedule, return exactly one event. ` +
-          `If the user describes a big, vague, or multi-step goal or project, break it into 3-8 concrete, ` +
-          `actionable subtasks, each with its own specific start/end datetime spread out sensibly between now ` +
-          `and any deadline mentioned (default to spreading over the next 1-2 weeks if no deadline is given). ` +
-          `Order subtasks logically and give every subtask in the same breakdown the same projectTitle. ` +
+          `If the user describes a big, vague, or multi-step goal or project, break it into concrete, actionable ` +
+          `subtasks (as many as needed, there is no upper limit — do not truncate), each with its own specific, ` +
+          `non-overlapping start/end datetime spread out sensibly between now and any deadline mentioned (default ` +
+          `to spreading over the next 1-2 weeks if no deadline is given). ` +
+          `If the user asks for something recurring across multiple weeks (e.g. "every Monday and Wednesday for ` +
+          `the next 6 weeks", "daily standup for the rest of the month"), you MUST enumerate every single ` +
+          `occurrence as its own event for the ENTIRE requested range — never stop after just the first few; ` +
+          `count the occurrences yourself before answering to make sure none are missing. ` +
+          `Order subtasks/occurrences logically and give every event in the same breakdown or recurring series ` +
+          `the same projectTitle. ` +
           `If the user is just asking a question or chatting (not scheduling anything), return an empty events array.`,
         tools: [{ functionDeclarations: [scheduleTool] }],
         toolConfig: {
@@ -117,6 +152,11 @@ export async function POST(req: NextRequest) {
         projectTitle?: string;
       }[];
     };
+
+    // Debug: log the raw tool call the model made so it's visible in the dev server terminal.
+    console.log(
+      "[schedule_calendar_events] raw tool call ->\n" + JSON.stringify({ name: "schedule_calendar_events", args }, null, 2)
+    );
 
     // Assign a shared color per projectTitle so breakdown subtasks look grouped on the calendar.
     const colorByProject = new Map<string, string>();
@@ -145,7 +185,11 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({ reply: args.reply, events });
+    return NextResponse.json({
+      reply: args.reply,
+      events,
+      debug: { toolCall: { name: "schedule_calendar_events", args } },
+    });
   } catch (err) {
     console.error("Gemini request failed", err);
     return NextResponse.json(
