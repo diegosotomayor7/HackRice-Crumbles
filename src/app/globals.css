@@ -47,8 +47,8 @@ body {
   background-color: color-mix(in srgb, var(--color-accent) 25%, white) !important;
 }
 
-/* Steps marked done/skipped in ExecutionScreen (see Calendar.tsx) stay on the calendar as
-   a record, but read as finished rather than still-to-do. */
+/* Steps marked done in ExecutionScreen (see Calendar.tsx) stay on the calendar as a
+   record, but read as finished rather than still-to-do. */
 .crumbles-calendar .crumb-task-done {
   opacity: 0.4;
 }

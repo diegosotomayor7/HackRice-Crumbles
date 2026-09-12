@@ -4,7 +4,7 @@
 //
 // Tasks ARE CalendarEvents scoped to one projectId — there's no parallel Task model. This
 // keeps the calendar/profile screens (which already read CalendarEvent[]) working unchanged
-// while ExecutionScreen adds `status` (pending/done/skipped) and `order` on top.
+// while ExecutionScreen adds `status` (pending/done) and `order` on top.
 
 import { CalendarEvent } from "@/types/event";
 
@@ -191,7 +191,7 @@ export function reorderTasks(
 export function setTaskStatus(
   events: CalendarEvent[],
   id: string,
-  status: "pending" | "done" | "skipped"
+  status: "pending" | "done"
 ): CalendarEvent[] {
   return events.map((e) => (e.id === id ? { ...e, status } : e));
 }

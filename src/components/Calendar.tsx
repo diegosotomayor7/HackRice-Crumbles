@@ -53,9 +53,9 @@ export default function Calendar() {
     borderColor: e.color ?? FALLBACK_EVENT_COLOR,
     // Soft pastel backgrounds read poorly with FullCalendar's default white event text.
     textColor: "#6b3f24",
-    // Faded + struck through once ExecutionScreen marks a step done/skipped, instead of
-    // removing it outright — keeps the calendar an honest record of what happened.
-    classNames: e.status === "done" || e.status === "skipped" ? ["crumb-task-done"] : [],
+    // Faded + struck through once ExecutionScreen marks a step done, instead of removing
+    // it outright — keeps the calendar an honest record of what happened.
+    classNames: e.status === "done" ? ["crumb-task-done"] : [],
   }));
 
   const handleDrop = (arg: EventDropArg) => {

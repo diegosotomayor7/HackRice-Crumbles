@@ -17,7 +17,7 @@ export type CalendarEvent = {
   notes?: string;
   /** Execution state within its project. Undefined is treated as "pending" — only
    * ExecutionScreen reads/writes this, so events outside a project never need it. */
-  status?: "pending" | "done" | "skipped";
+  status?: "pending" | "done";
   /** Position within its project's step list. Undefined falls back to start-time order. */
   order?: number;
 };
