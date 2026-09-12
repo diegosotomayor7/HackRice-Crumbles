@@ -1,6 +1,7 @@
 "use client";
 
 import { useCalendarStore } from "@/lib/store";
+import Card from "@/components/ui/Card";
 
 const timeFormatter = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
@@ -18,33 +19,30 @@ export default function CrumbStack() {
 
   if (upcoming.length === 0) {
     return (
-      <div className="rounded-xl border border-black/10 bg-white p-4 text-center text-sm text-neutral-400 dark:border-white/10 dark:bg-neutral-900">
+      <Card className="p-4 text-center text-sm text-ink-muted">
         Nothing coming up. Tell the chat about a goal to get started.
-      </div>
+      </Card>
     );
   }
 
   return (
     <div className="flex flex-col gap-2">
       {upcoming.map((crumb) => (
-        <div
-          key={crumb.id}
-          className="flex items-center gap-3 rounded-xl border border-black/10 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-neutral-900"
-        >
+        <Card key={crumb.id} className="flex items-center gap-3 p-3">
           <span
             className="h-2.5 w-2.5 shrink-0 rounded-full"
-            style={{ backgroundColor: crumb.color ?? "#6366f1" }}
+            style={{ backgroundColor: crumb.color ?? "#e2b06b" }}
           />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{crumb.title}</p>
+            <p className="truncate text-sm font-medium text-ink">{crumb.title}</p>
             {crumb.projectTitle && (
-              <p className="truncate text-xs text-neutral-400">{crumb.projectTitle}</p>
+              <p className="truncate text-xs text-ink-muted">{crumb.projectTitle}</p>
             )}
           </div>
-          <span className="shrink-0 text-xs text-neutral-400">
+          <span className="shrink-0 text-xs text-ink-muted">
             {crumb.allDay ? "All day" : timeFormatter.format(new Date(crumb.start))}
           </span>
-        </div>
+        </Card>
       ))}
     </div>
   );

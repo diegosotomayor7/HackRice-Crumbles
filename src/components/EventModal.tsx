@@ -65,12 +65,12 @@ export default function EventModal({ mode, initial, onSave, onDelete, onClose }:
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-xl bg-white p-4 shadow-xl dark:bg-neutral-900"
+        className="w-full max-w-sm rounded-card border border-ink/10 bg-surface p-4 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-medium">{mode === "create" ? "New event" : "Edit event"}</h2>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-600" aria-label="Close">
+          <h2 className="font-medium text-ink">{mode === "create" ? "New event" : "Edit event"}</h2>
+          <button onClick={onClose} className="text-ink-muted hover:text-ink" aria-label="Close">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -81,31 +81,31 @@ export default function EventModal({ mode, initial, onSave, onDelete, onClose }:
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Title"
-            className="w-full rounded-md border border-black/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-indigo-500 dark:border-white/10"
+            className="w-full rounded-md border border-ink/10 bg-transparent px-3 py-2 text-sm text-ink outline-none focus:border-tan"
           />
 
           <div className="flex gap-2">
-            <label className="flex-1 text-xs text-neutral-500">
+            <label className="flex-1 text-xs text-ink-muted">
               Start
               <input
                 type="datetime-local"
                 value={start}
                 onChange={(e) => setStart(e.target.value)}
-                className="mt-1 w-full rounded-md border border-black/10 bg-transparent px-2 py-1.5 text-sm dark:border-white/10"
+                className="mt-1 w-full rounded-md border border-ink/10 bg-transparent px-2 py-1.5 text-sm text-ink"
               />
             </label>
-            <label className="flex-1 text-xs text-neutral-500">
+            <label className="flex-1 text-xs text-ink-muted">
               End
               <input
                 type="datetime-local"
                 value={end}
                 onChange={(e) => setEnd(e.target.value)}
-                className="mt-1 w-full rounded-md border border-black/10 bg-transparent px-2 py-1.5 text-sm dark:border-white/10"
+                className="mt-1 w-full rounded-md border border-ink/10 bg-transparent px-2 py-1.5 text-sm text-ink"
               />
             </label>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
+          <label className="flex items-center gap-2 text-sm text-ink">
             <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
             All day
           </label>
@@ -115,7 +115,7 @@ export default function EventModal({ mode, initial, onSave, onDelete, onClose }:
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Notes (optional)"
             rows={2}
-            className="w-full resize-none rounded-md border border-black/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-indigo-500 dark:border-white/10"
+            className="w-full resize-none rounded-md border border-ink/10 bg-transparent px-3 py-2 text-sm text-ink outline-none focus:border-tan"
           />
 
           <div className="flex gap-2">

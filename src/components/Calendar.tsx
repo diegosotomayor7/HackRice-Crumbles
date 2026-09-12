@@ -80,11 +80,11 @@ export default function Calendar() {
   };
 
   return (
-    <div className="flex h-full flex-col gap-2 rounded-xl border border-black/10 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-neutral-900">
+    <div className="rounded-card border border-ink/10 bg-surface shadow-card flex h-full flex-col gap-2 p-3">
       <div className="flex justify-end">
         <button
           onClick={handleNewEventClick}
-          className="flex items-center gap-1 rounded-md border border-black/10 px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-50 dark:border-white/10 dark:text-neutral-300 dark:hover:bg-neutral-800"
+          className="flex items-center gap-1 rounded-md border border-ink/10 px-2 py-1 text-xs text-ink hover:bg-ink/5"
         >
           <Plus className="h-3.5 w-3.5" /> New event
         </button>

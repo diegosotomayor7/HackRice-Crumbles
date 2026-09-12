@@ -5,6 +5,8 @@ import { Send, Sparkles, X } from "lucide-react";
 import clsx from "clsx";
 import { useCalendarStore } from "@/lib/store";
 import { CalendarEvent, DraftCrumb } from "@/types/event";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 
 export default function ChatPanel({ onClose }: { onClose?: () => void }) {
   const messages = useCalendarStore((s) => s.messages);
@@ -110,15 +112,15 @@ export default function ChatPanel({ onClose }: { onClose?: () => void }) {
   };
 
   return (
-    <div className="flex h-full flex-col bg-white dark:bg-neutral-900">
-      <div className="flex items-center gap-2 border-b border-black/10 p-3 dark:border-white/10">
-        <Sparkles className="h-4 w-4 text-indigo-500" />
-        <span className="flex-1 font-medium">Crumbles</span>
+    <div className="flex h-full flex-col bg-bg">
+      <div className="flex items-center gap-2 border-b border-ink/10 p-3">
+        <Sparkles className="h-4 w-4 text-tan" />
+        <span className="font-heading flex-1 font-medium text-ink">Crumbles</span>
         {onClose && (
           <button
             onClick={onClose}
             aria-label="Close"
-            className="rounded-md p-1 text-neutral-400 hover:bg-black/5 hover:text-neutral-600 dark:hover:bg-white/10 dark:hover:text-neutral-300"
+            className="rounded-md p-1 text-ink-muted hover:bg-ink/5 hover:text-ink"
           >
             <X className="h-5 w-5" />
           </button>
@@ -128,18 +130,17 @@ export default function ChatPanel({ onClose }: { onClose?: () => void }) {
       <div className="flex-1 space-y-3 overflow-y-auto p-3">
         {messages.map((m) => (
           <div key={m.id} className={clsx(m.role === "user" ? "ml-auto max-w-[85%]" : "max-w-[85%]")}>
-            <div
-              className={clsx(
-                "rounded-lg px-3 py-2 text-sm whitespace-pre-wrap",
-                m.role === "user"
-                  ? "bg-indigo-600 text-white"
-                  : "bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100"
-              )}
-            >
-              {m.content}
-            </div>
+            {m.role === "user" ? (
+              <div className="rounded-lg bg-ink px-3 py-2 text-sm whitespace-pre-wrap text-bg">
+                {m.content}
+              </div>
+            ) : (
+              <Card className="px-3 py-2 text-sm whitespace-pre-wrap text-ink shadow-none">
+                {m.content}
+              </Card>
+            )}
             {debugByMessage[m.id] !== undefined && (
-              <details className="mt-1 rounded-md border border-black/10 bg-neutral-50 text-xs text-neutral-600 dark:border-white/10 dark:bg-neutral-950 dark:text-neutral-400">
+              <details className="mt-1 rounded-md border border-ink/10 bg-bg text-xs text-ink-muted">
                 <summary className="cursor-pointer select-none px-2 py-1 font-medium">
                   tool call (click to expand)
                 </summary>
@@ -151,27 +152,21 @@ export default function ChatPanel({ onClose }: { onClose?: () => void }) {
           </div>
         ))}
         {loading && (
-          <div className="max-w-[85%] rounded-lg bg-neutral-100 px-3 py-2 text-sm text-neutral-500 dark:bg-neutral-800">
-            Thinking…
-          </div>
+          <Card className="max-w-[85%] px-3 py-2 text-sm text-ink-muted shadow-none">Thinking…</Card>
         )}
       </div>
 
-      <div className="flex gap-2 border-t border-black/10 p-3 dark:border-white/10">
+      <div className="flex gap-2 border-t border-ink/10 p-3">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
           placeholder='Try: "Build a marketing site by Oct 1"'
-          className="flex-1 rounded-md border border-black/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-indigo-500 dark:border-white/10"
+          className="flex-1 rounded-md border border-ink/10 bg-transparent px-3 py-2 text-sm text-ink outline-none focus:border-tan"
         />
-        <button
-          onClick={send}
-          disabled={loading}
-          className="flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-white disabled:opacity-50"
-        >
+        <Button onClick={send} disabled={loading}>
           <Send className="h-4 w-4" />
-        </button>
+        </Button>
       </div>
     </div>
   );
