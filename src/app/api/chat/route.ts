@@ -3,19 +3,22 @@ import { NextRequest, NextResponse } from "next/server";
 
 // ---------------------------------------------------------------------------
 // This route is the whole "AI brain" of the app. One tool call does both jobs:
-//   1. Quick create  -> user describes one concrete thing, we return 1 event.
-//   2. Task breakdown -> user describes a big/vague goal, we return N subtask
-//      events spread across realistic dates, all tagged with the same
-//      projectId/projectTitle so the calendar can color-code them together.
+//   1. Quick create   -> user describes one (or several) concrete thing(s) to
+//      schedule; we return that many events, added straight to the calendar.
+//   2. Goal breakdown -> user describes a big/vague goal; we return an initial
+//      3-8 subtask breakdown covering the whole goal (isGoalBreakdown: true).
+//      The client puts those cards into the swipe-to-refine review stack
+//      instead of the calendar — the user can further split any one subtask
+//      that still feels too big (see /api/decompose) or insert a gap-filler
+//      between two neighboring cards (see /api/insert-crumb).
 // The model decides which mode applies based on the system instruction below.
 // ---------------------------------------------------------------------------
 
 const scheduleTool = {
   name: "schedule_calendar_events",
   description:
-    "Reply to the user and, when appropriate, create one or more calendar events. " +
-    "Use exactly one event for a single concrete request. For a large or multi-step " +
-    "goal, break it into several smaller, actionable, realistically-scheduled subtasks.",
+    "Reply to the user and, when appropriate, create calendar events — or, for a big/vague goal, " +
+    "hand back an initial subtask breakdown for the user to further refine themselves by swiping.",
   parameters: {
     type: Type.OBJECT,
     properties: {
@@ -23,9 +26,19 @@ const scheduleTool = {
         type: Type.STRING,
         description: "Short, friendly chat reply to show the user (1-3 sentences).",
       },
+      isGoalBreakdown: {
+        type: Type.BOOLEAN,
+        description:
+          "True when the user described a big, vague, or multi-step goal/project. False for a single " +
+          "concrete thing to schedule, or when just chatting.",
+      },
       events: {
         type: Type.ARRAY,
-        description: "Calendar events to create. Empty array if the user didn't ask to schedule anything.",
+        description:
+          "When isGoalBreakdown is true: 3-8 subtask events covering the whole goal end to end — this is a " +
+          "starting point the user will further refine themselves by swiping, not the final word. When " +
+          "isGoalBreakdown is false: zero or more concrete events to create directly (empty if the user didn't " +
+          "ask to schedule anything).",
         items: {
           type: Type.OBJECT,
           properties: {
@@ -33,19 +46,19 @@ const scheduleTool = {
             start: { type: Type.STRING, description: "ISO 8601 datetime, e.g. 2026-09-15T14:00:00" },
             end: { type: Type.STRING, description: "ISO 8601 datetime, must be after start." },
             allDay: { type: Type.BOOLEAN },
-            notes: { type: Type.STRING, description: "Optional 1-sentence detail about the subtask." },
+            notes: { type: Type.STRING, description: "Optional 1-sentence detail." },
             projectTitle: {
               type: Type.STRING,
               description:
-                "Only set when this event is one of several subtasks from a single breakdown request " +
-                "(same value for every subtask in that breakdown). Omit for standalone events.",
+                "Only set when isGoalBreakdown is true (the goal itself, e.g. \"Winning the hackathon\") or " +
+                "this event is one of several standalone events from the same request. Omit otherwise.",
             },
           },
           required: ["title", "start", "end"],
         },
       },
     },
-    required: ["reply", "events"],
+    required: ["reply", "isGoalBreakdown", "events"],
   },
 };
 
@@ -116,24 +129,30 @@ export async function POST(req: NextRequest) {
           `scheduled within reasonable waking/working hours (roughly 8am-9pm) unless the user says otherwise. ` +
           `\n\n` +
           `Existing events already on the calendar (both user-created and from earlier AI replies):\n${existingEventsList}\n` +
-          `New events you create must NOT overlap each other, and must NOT overlap any existing event listed above — ` +
-          `pick different times/days instead. Overlaps are only ever acceptable if the user explicitly asks for two ` +
-          `things at the same time.` +
+          `Events you return, whether isGoalBreakdown is true or false, must NOT overlap each other, and must NOT ` +
+          `overlap any existing event listed above — pick different times/days instead. Overlaps are only ever ` +
+          `acceptable if the user explicitly asks for two things at the same time.` +
           `\n\n` +
-          `Always respond by calling schedule_calendar_events. ` +
-          `If the user describes ONE concrete thing to schedule, return exactly one event. ` +
-          `If the user describes a big, vague, or multi-step goal or project, break it into crumbs — concrete, ` +
-          `physical next actions the user can start within 10 seconds of reading, never vague intentions ` +
-          `(as many as needed, there is no upper limit — do not truncate), each with its own specific, ` +
-          `non-overlapping start/end datetime spread out sensibly between now and any deadline mentioned (default ` +
-          `to spreading over the next 1-2 weeks if no deadline is given). ` +
-          `If the user asks for something recurring across multiple weeks (e.g. "every Monday and Wednesday for ` +
-          `the next 6 weeks", "daily standup for the rest of the month"), you MUST enumerate every single ` +
-          `occurrence as its own event for the ENTIRE requested range — never stop after just the first few; ` +
-          `count the occurrences yourself before answering to make sure none are missing. ` +
-          `Order subtasks/occurrences logically and give every event in the same breakdown or recurring series ` +
-          `the same projectTitle. ` +
-          `If the user is just asking a question or chatting (not scheduling anything), return an empty events array.`,
+          `Always respond by calling schedule_calendar_events. Decide which of these two modes applies:\n` +
+          `1. isGoalBreakdown: false — the user described ONE concrete thing to schedule (or several concrete, ` +
+          `unrelated things), or is just asking a question/chatting. Return that many events directly (zero if ` +
+          `just chatting). If the user asks for something recurring across multiple weeks (e.g. "every Monday and ` +
+          `Wednesday for the next 6 weeks"), you MUST enumerate every single occurrence as its own event for the ` +
+          `ENTIRE requested range — never stop after just the first few; count the occurrences yourself before ` +
+          `answering. Give every event from the same recurring series the same projectTitle.\n` +
+          `2. isGoalBreakdown: true — the user described a big, vague, or multi-step goal or project (e.g. "I want ` +
+          `to win a hackathon", "build a marketing site"). Break it into 3-8 concrete subtasks that cover the ` +
+          `WHOLE arc of the goal end to end — not just the first couple of steps. For a hackathon-style goal that ` +
+          `means something like: set up the repo, scope/outline the idea, build the core feature(s), build any ` +
+          `remaining features, prepare the demo/pitch, submit — never stop at just "set up" and "outline." Each ` +
+          `subtask still needs its own start/end datetime spread out sensibly between now and any deadline ` +
+          `mentioned (default to the next 1-2 weeks if none given), and every subtask must share the same ` +
+          `projectTitle: a short noun-phrase distillation of the goal itself (e.g. "Winning the hackathon", not ` +
+          `"I want to win a hackathon"). These are the user's starting point, not the final word — they land in a ` +
+          `review screen where the user can further split any subtask that still feels too big, so bias toward ` +
+          `fewer, meatier subtasks rather than trying to anticipate every possible sub-step yourself.\n` +
+          `If the user is just asking a question or chatting (not scheduling anything), use isGoalBreakdown: false ` +
+          `and return an empty events array.`,
         tools: [{ functionDeclarations: [scheduleTool] }],
         toolConfig: {
           functionCallingConfig: { mode: FunctionCallingConfigMode.ANY },
@@ -146,8 +165,13 @@ export async function POST(req: NextRequest) {
       (response.candidates?.[0]?.content?.parts?.find((p) => p.functionCall)
         ?.functionCall as { args?: Record<string, unknown> } | undefined);
 
-    const args = (call?.args ?? { reply: response.text ?? "Sorry, I didn't catch that.", events: [] }) as {
+    const args = (call?.args ?? {
+      reply: response.text ?? "Sorry, I didn't catch that.",
+      isGoalBreakdown: false,
+      events: [],
+    }) as {
       reply: string;
+      isGoalBreakdown: boolean;
       events: {
         title: string;
         start: string;
@@ -192,6 +216,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       reply: args.reply,
+      isGoalBreakdown: args.isGoalBreakdown,
       events,
       debug: { toolCall: { name: "schedule_calendar_events", args } },
     });

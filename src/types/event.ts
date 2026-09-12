@@ -23,3 +23,22 @@ export type ChatMessage = {
   content: string;
   createdAt: string;
 };
+
+// A crumb the user hasn't committed to the calendar yet. Lives in a separate staging
+// list (`draftCrumbs` in the store) so the user can keep swiping — right to commit it as
+// a real CalendarEvent, left to split it into two smaller crumbs — before anything touches
+// the calendar. Same shape as CalendarEvent plus `depth`, which tracks how many times this
+// branch has been split (0 = the original goal card) so the AI can be pushed toward more
+// concrete actions the deeper it goes.
+export type DraftCrumb = {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  allDay?: boolean;
+  notes?: string;
+  projectId?: string;
+  projectTitle?: string;
+  color?: string;
+  depth: number;
+};

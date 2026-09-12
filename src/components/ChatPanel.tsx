@@ -4,12 +4,13 @@ import { useState } from "react";
 import { Send, Sparkles } from "lucide-react";
 import clsx from "clsx";
 import { useCalendarStore } from "@/lib/store";
-import { CalendarEvent } from "@/types/event";
+import { CalendarEvent, DraftCrumb } from "@/types/event";
 
 export default function ChatPanel() {
   const messages = useCalendarStore((s) => s.messages);
   const addMessage = useCalendarStore((s) => s.addMessage);
   const addEvents = useCalendarStore((s) => s.addEvents);
+  const startReview = useCalendarStore((s) => s.startReview);
   const events = useCalendarStore((s) => s.events);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -51,9 +52,33 @@ export default function ChatPanel() {
           existingEvents: events.map((e) => ({ title: e.title, start: e.start, end: e.end, allDay: e.allDay })),
         }),
       });
-      const data = (await res.json()) as { reply: string; events: CalendarEvent[]; debug?: unknown };
+      const data = (await res.json()) as {
+        reply: string;
+        isGoalBreakdown?: boolean;
+        events: CalendarEvent[];
+        debug?: unknown;
+      };
 
-      if (data.events?.length) addEvents(data.events);
+      if (data.isGoalBreakdown && data.events?.length) {
+        // Big/vague goal: hand the AI's initial subtask breakdown to the swipe-to-refine
+        // review screen instead of putting it straight on the calendar — the user can
+        // still split any one subtask further (or insert a gap-filler) by swiping.
+        const crumbs: DraftCrumb[] = data.events.map((e) => ({
+          id: e.id,
+          title: e.title,
+          start: e.start,
+          end: e.end,
+          allDay: e.allDay,
+          notes: e.notes,
+          projectId: e.projectId,
+          projectTitle: e.projectTitle,
+          color: e.color,
+          depth: 0,
+        }));
+        startReview(crumbs);
+      } else if (data.events?.length) {
+        addEvents(data.events);
+      }
 
       // Also print the full response (including the raw tool call) to the browser console.
       console.log("[chat] API response ->", data);

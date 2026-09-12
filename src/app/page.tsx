@@ -2,11 +2,15 @@
 
 import dynamic from "next/dynamic";
 import ChatPanel from "@/components/ChatPanel";
+import CrumbReview from "@/components/CrumbReview";
+import { useCalendarStore } from "@/lib/store";
 
 // FullCalendar touches window/document — load client-side only.
 const Calendar = dynamic(() => import("@/components/Calendar"), { ssr: false });
 
 export default function Home() {
+  const reviewActive = useCalendarStore((s) => s.reviewActive);
+
   return (
     <div className="flex h-screen flex-col bg-neutral-50 dark:bg-neutral-950">
       <header className="flex items-center justify-between border-b border-black/10 px-4 py-3 dark:border-white/10">
@@ -22,6 +26,9 @@ export default function Home() {
           <Calendar />
         </div>
       </main>
+      {/* Full-screen takeover: swiping through a goal's crumbs replaces the whole app
+          until the user commits them (or discards) — see CrumbReview for why. */}
+      {reviewActive && <CrumbReview />}
     </div>
   );
 }
