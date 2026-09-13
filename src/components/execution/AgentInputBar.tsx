@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, Plus, Send, X } from "lucide-react";
+import { Send, X } from "lucide-react";
 
 // Dumb presentational bottom bar shared by ExecutionScreen (and, later, PlanScreen). The
 // scope chip ("↳ Step 3") shows which task a message will be attached to — see the
@@ -37,12 +37,6 @@ export default function AgentInputBar({
         </div>
       )}
       <div className="flex items-center gap-2">
-        <button
-          disabled={disabled}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-black text-black disabled:opacity-40"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -51,14 +45,6 @@ export default function AgentInputBar({
           placeholder={placeholder}
           className="min-w-0 flex-1 rounded-full border border-black/20 bg-white px-3.5 py-2 text-sm text-black outline-none focus:border-black disabled:opacity-60"
         />
-        {/* Non-functional placeholder — voice input isn't wired up for the demo. */}
-        <button
-          disabled
-          title="Voice input (coming soon)"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/20 text-black/30"
-        >
-          <Mic className="h-4 w-4" />
-        </button>
         <button
           onClick={onSubmit}
           disabled={disabled || !value.trim()}

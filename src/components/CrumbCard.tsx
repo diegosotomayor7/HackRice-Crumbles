@@ -91,10 +91,10 @@ export default function CrumbCard({
       >
         <div className="min-w-0">
           {crumb.projectTitle && crumb.projectTitle !== crumb.title && (
-            <div className="truncate text-xs font-medium text-ink">{crumb.projectTitle}</div>
+            <div className="break-words text-xs font-medium text-ink">{crumb.projectTitle}</div>
           )}
-          <div className="truncate font-medium text-black">{crumb.title}</div>
-          <div className="text-xs text-black/60">{formatWindow(crumb)}</div>
+          <div className="break-words leading-snug font-medium text-black">{crumb.title}</div>
+          <div className="mt-1 text-xs text-black/60">{formatWindow(crumb)}</div>
           {crumb.notes && <div className="mt-1 text-xs text-black/40">{crumb.notes}</div>}
           {splitError && <div className="mt-1 text-xs text-red-500">{splitError}</div>}
         </div>
