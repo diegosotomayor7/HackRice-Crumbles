@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type, FunctionCallingConfigMode } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
+import { addDays, addWeeks, endOfWeek, startOfWeek } from "date-fns";
 
 // ---------------------------------------------------------------------------
 // This route is the whole "AI brain" of the app. Before the main call, a cheap
@@ -211,7 +212,26 @@ export async function POST(req: NextRequest) {
   // timezones, and "tomorrow"/"next week" must resolve against the user's own clock
   // (the one they see in the calendar UI), not wherever this process happens to run.
   const nowLabel = clientNow ?? new Date().toISOString().slice(0, 19);
-  const nowDayOfWeek = new Date(nowLabel).toLocaleDateString("en-US", { weekday: "long" });
+  const nowDate = new Date(nowLabel);
+  const nowDayOfWeek = nowDate.toLocaleDateString("en-US", { weekday: "long" });
+
+  // "Next week" is exactly the Mon-Sun span after the CURRENT one — computed here, not left
+  // for the model to work out, because it was inconsistent about it (e.g. asked from a
+  // Saturday, it sometimes scheduled "next week" just 2-3 days out, still inside the current
+  // week, instead of the actual following week). date-fns does the calendar-boundary math
+  // once, correctly, and the prompt just hands the model the literal resolved range.
+  // Local-getter formatting, not .toISOString() — nowLabel is a naive (no-offset) datetime,
+  // parsed as local time, and .toISOString() would convert to UTC and risk shifting the
+  // date by a day depending on the server's timezone, exactly the class of bug this whole
+  // naive-datetime convention exists to avoid.
+  const isoDate = (d: Date) => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
+  const thisWeekStart = startOfWeek(nowDate, { weekStartsOn: 1 });
+  const thisWeekEnd = endOfWeek(nowDate, { weekStartsOn: 1 });
+  const nextWeekStart = addWeeks(thisWeekStart, 1);
+  const nextWeekEnd = addDays(nextWeekStart, 6);
 
   const existingEventsList =
     existingEvents && existingEvents.length > 0
@@ -296,7 +316,11 @@ export async function POST(req: NextRequest) {
           `The current date/time, exactly as shown on the user's own device, is ${nowLabel} (a ${nowDayOfWeek}). ` +
           `Always compute relative dates ("today", "tomorrow", "next week", "in 3 days") from this exact value — ` +
           `"tomorrow" always means the calendar day immediately after ${nowLabel.slice(0, 10)}, never two days later. ` +
-          `Do not use any other notion of the current date. ` +
+          `"This week" always means ${isoDate(thisWeekStart)} (Monday) through ${isoDate(thisWeekEnd)} (Sunday), ` +
+          `inclusive. "Next week" always means the following Mon-Sun span, ${isoDate(nextWeekStart)} through ` +
+          `${isoDate(nextWeekEnd)} — use exactly this range, don't compute it yourself; it's deliberately not ` +
+          `"today + 7 days" (e.g. if today is Saturday, "next week" is still that whole coming Mon-Sun span, not ` +
+          `a couple of days from now still inside the current week). Do not use any other notion of the current date. ` +
           `Write every start/end as a naive local datetime with NO timezone suffix (no "Z", no offset), in the ` +
           `same format as the current date/time above, e.g. 2026-09-15T14:00:00. ` +
           `Always set allDay explicitly (true or false) on every event. ` +
