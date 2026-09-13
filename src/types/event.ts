@@ -20,6 +20,18 @@ export type CalendarEvent = {
   status?: "pending" | "done";
   /** Position within its project's step list. Undefined falls back to start-time order. */
   order?: number;
+  /** Set uniformly across every event in a project when the user explicitly marks it a
+   * long-term goal at commit time (CrumbReview's toggle) — NOT inferred by the AI. A
+   * project without this never shows in Home's "Longterm goals" section, e.g. a plain
+   * recurring series ("walk the dog every day this week") stays out unless declared. */
+  isLongtermGoal?: boolean;
+  /** Set on the generated steps of a plain (non-goal) event broken down from Today's Plan —
+   * excludes them from every calendar-facing surface (Calendar, Today's Plan, Next up,
+   * weekly stats) while keeping them reachable through their container's ExecutionScreen
+   * (getPlanTasks matches on projectId regardless of this flag). The container event itself
+   * is never touched or hidden — breaking a task down mustn't spawn visible new calendar
+   * entries, just attach steps behind the one entry that was already there. */
+  hidden?: boolean;
 };
 
 export type ChatMessage = {
@@ -34,8 +46,8 @@ export type ChatMessage = {
 };
 
 // One intake chat conversation. Only used while a goal is being broken down into its
-// initial crumbs (see CrumbReview) — once committed, "Longterm goals" opens ExecutionScreen
-// directly, not this conversation, so a session is never reopened after its goal exists.
+// initial crumbs (see CrumbReview) — once committed, "Longterm goals" opens the read-only
+// GoalTimeline, not this conversation, so a session is never reopened after its goal exists.
 export type ChatSession = {
   id: string;
   title: string;

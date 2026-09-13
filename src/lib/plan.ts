@@ -4,7 +4,9 @@
 //
 // Tasks ARE CalendarEvents scoped to one projectId — there's no parallel Task model. This
 // keeps the calendar/profile screens (which already read CalendarEvent[]) working unchanged
-// while ExecutionScreen adds `status` (pending/done) and `order` on top.
+// while ExecutionScreen adds `status` (pending/done) and `order` on top. A plain (non-goal)
+// event's generated steps are the one exception: see generateHiddenSteps — they're tagged
+// `hidden` and never replace/rename the container event calendar-facing screens already show.
 
 import { CalendarEvent } from "@/types/event";
 
@@ -52,6 +54,51 @@ function makeTask(
     color,
     status: "pending",
   };
+}
+
+// Generates a plain (non-goal) event's initial steps WITHOUT removing or altering the
+// event itself — unlike splitTask, which replaces the original with its pieces (correct
+// for a project step that's genuinely too big, wrong here since it would make the one
+// calendar entry the user tapped disappear and be replaced by several new ones). The
+// container keeps its own id/title/start/end exactly as scheduled; the steps are appended
+// as `hidden` events sharing its id as their projectId, sliced across its time window the
+// same way splitTask slices a task's window, so ExecutionScreen finds them via
+// getPlanTasks(events, container.id) while every calendar-facing view filters them out.
+export function generateHiddenSteps(
+  events: CalendarEvent[],
+  container: CalendarEvent,
+  inputs: TaskInput[]
+): CalendarEvent[] {
+  const windowStart = new Date(container.start);
+  const windowEnd = new Date(container.end);
+  const windowMs = Math.max(windowEnd.getTime() - windowStart.getTime(), inputs.length * 60_000);
+
+  const totalWeight = inputs.reduce((sum, t) => sum + (t.estimateMinutes ?? DEFAULT_ESTIMATE_MINUTES), 0);
+  let cursor = windowStart;
+  const steps: CalendarEvent[] = inputs.map((input, i) => {
+    const weight = input.estimateMinutes ?? DEFAULT_ESTIMATE_MINUTES;
+    const share = totalWeight > 0 ? weight / totalWeight : 1 / inputs.length;
+    const isLast = i === inputs.length - 1;
+    const start = cursor;
+    const end = isLast ? windowEnd : new Date(start.getTime() + windowMs * share);
+    cursor = end;
+    return {
+      id: crypto.randomUUID(),
+      title: input.title,
+      notes: input.detail,
+      start: start.toISOString(),
+      end: end.toISOString(),
+      allDay: false,
+      projectId: container.id,
+      projectTitle: container.title,
+      color: container.color,
+      status: "pending",
+      order: i,
+      hidden: true,
+    };
+  });
+
+  return [...events, ...steps];
 }
 
 export function addTasks(
@@ -162,6 +209,7 @@ export function splitTask(
       projectTitle: original.projectTitle,
       color: original.color,
       status: "pending" as const,
+      hidden: original.hidden,
     };
   });
 
@@ -193,5 +241,20 @@ export function setTaskStatus(
   id: string,
   status: "pending" | "done"
 ): CalendarEvent[] {
-  return events.map((e) => (e.id === id ? { ...e, status } : e));
+  const next = events.map((e) => (e.id === id ? { ...e, status } : e));
+
+  // If this task's siblings are a plain event's generated hidden steps (see
+  // generateHiddenSteps), the container event they're attached to — the one whose own id
+  // *is* their shared projectId — reflects them: done once every step is, back to pending
+  // the moment one isn't. A real long-term goal has no such self-referential container (its
+  // projectId is the goal's title, never one of its own step ids), so this is a no-op there.
+  const target = next.find((e) => e.id === id);
+  if (!target?.projectId) return next;
+  const container = next.find((e) => e.id === target.projectId);
+  if (!container) return next;
+  const siblings = next.filter((e) => e.projectId === target.projectId);
+  const allDone = siblings.length > 0 && siblings.every((e) => e.status === "done");
+  const containerStatus: "pending" | "done" = allDone ? "done" : "pending";
+  if (container.status === containerStatus) return next;
+  return next.map((e) => (e.id === container.id ? { ...e, status: containerStatus } : e));
 }

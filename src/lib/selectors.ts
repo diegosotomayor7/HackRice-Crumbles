@@ -46,66 +46,53 @@ export type ProjectProgress = {
   percent: number;
 };
 
-export function projectProgress(events: CalendarEvent[], now: Date = new Date()): ProjectProgress[] {
-  return [...groupByProject(events).entries()].map(([projectId, list]) => {
-    const done = list.filter((e) => isDone(e, now)).length;
-    return {
-      projectId,
-      projectTitle: list[0].projectTitle ?? list[0].title,
-      done,
-      total: list.length,
-      percent: Math.round((done / list.length) * 100),
-    };
-  });
-}
-
 function projectIdsWithCrumbToday(events: CalendarEvent[], now: Date): Set<string> {
   return new Set(
     events.filter((e) => e.projectId && isSameLocalDay(new Date(e.start), now)).map((e) => e.projectId!)
   );
 }
 
-/** Projects with at least one crumb landing today. */
-export function projectsToday(events: CalendarEvent[], now: Date = new Date()): ProjectProgress[] {
-  const todayIds = projectIdsWithCrumbToday(events, now);
-  return projectProgress(events, now).filter((p) => todayIds.has(p.projectId));
+/** Individual events landing today, earliest first — Home's "Today's Plan" is now a list of
+ *  actual events (each clickable into its own project's execution view), not a per-project
+ *  summary. Includes standalone events with no projectId too. Excludes `hidden` events — the
+ *  generated steps of a plain event's breakdown, which live only in that event's own
+ *  ExecutionScreen, not as separate entries here (see plan.generateHiddenSteps) — and excludes
+ *  done ones, so completing a task actually leaves Today's Plan instead of sitting there faded
+ *  for the rest of the day (page.tsx animates the exit via AnimatePresence when it's visible). */
+export function todaysEvents(events: CalendarEvent[], now: Date = new Date()): CalendarEvent[] {
+  return events
+    .filter((e) => !e.hidden && !isDone(e, now) && isSameLocalDay(new Date(e.start), now))
+    .sort((a, b) => a.start.localeCompare(b.start));
 }
 
-export type LongtermGoal = {
-  projectId: string;
-  projectTitle: string;
-  nextStepMinutes: number;
-  /** Share of this goal's steps marked done, 0-100 — lets the Home card fade once it hits 100. */
-  percent: number;
-};
-
-// Every project not already covered by Today's Plan lands here — including one whose
-// crumbs are all overdue/done, so a goal can never quietly vanish from both sections just
-// because none of its crumbs happen to land exactly on today. Newest project first (Map
-// preserves the order projects first appear in `events`, so this just reverses that).
-export function longtermGoals(events: CalendarEvent[], now: Date = new Date()): LongtermGoal[] {
+// Only projects explicitly marked isLongtermGoal (CrumbReview's toggle at commit time —
+// never AI-inferred) land here, and only once nothing from them is due today, so a goal
+// can never quietly vanish from both sections just because one of its crumbs happens to
+// land exactly on today. A plain recurring series (e.g. "walk the dog every day this
+// week") never sets the flag, so it stays out. Newest project first (Map preserves the
+// order projects first appear in `events`, so this just reverses that). Home shows these
+// as plain progress bars, so the shape is just ProjectProgress.
+export function longtermGoals(events: CalendarEvent[], now: Date = new Date()): ProjectProgress[] {
   const todayIds = projectIdsWithCrumbToday(events, now);
-  const goals: LongtermGoal[] = [];
+  const goals: ProjectProgress[] = [];
   for (const [projectId, list] of groupByProject(events)) {
-    if (todayIds.has(projectId)) continue;
-    const sorted = [...list].sort((a, b) => a.start.localeCompare(b.start));
-    // Prefer the next crumb still to do; fall back to the last one so a fully-done
-    // project still shows something rather than disappearing entirely.
-    const next = sorted.find((e) => !isDone(e, now)) ?? sorted[sorted.length - 1];
-    const done = sorted.filter((e) => isDone(e, now)).length;
+    if (todayIds.has(projectId) || !list.some((e) => e.isLongtermGoal)) continue;
+    const done = list.filter((e) => isDone(e, now)).length;
     goals.push({
       projectId,
-      projectTitle: next.projectTitle ?? next.title,
-      nextStepMinutes: durationMinutes(next),
-      percent: Math.round((done / sorted.length) * 100),
+      projectTitle: list[0].projectTitle ?? list[0].title,
+      done,
+      total: list.length,
+      percent: Math.round((done / list.length) * 100),
     });
   }
   return goals.reverse();
 }
 
-/** Earliest not-yet-done event, across all projects and standalone tasks. */
+/** Earliest not-yet-done event, across all projects and standalone tasks. Excludes `hidden`
+ *  generated steps for the same reason todaysEvents does. */
 export function nextUpEvent(events: CalendarEvent[], now: Date = new Date()): CalendarEvent | null {
-  const pending = events.filter((e) => !isDone(e, now));
+  const pending = events.filter((e) => !e.hidden && !isDone(e, now));
   if (pending.length === 0) return null;
   return [...pending].sort((a, b) => a.start.localeCompare(b.start))[0];
 }
@@ -144,7 +131,10 @@ export type WeeklyStats = {
 // today would count as "already done last week" too, and silently erase its own
 // contribution to the week-over-week change below.
 function overallProgressPercent(events: CalendarEvent[], asOf: Date, now: Date): number {
-  const withProject = events.filter((e) => e.projectId);
+  // isLongtermGoal, not just projectId — a plain event's generated steps have a projectId
+  // too (their container's id) but were never declared a goal, so they'd otherwise inflate
+  // this specifically-labeled "progress on long term goal" stat.
+  const withProject = events.filter((e) => e.projectId && e.isLongtermGoal);
   if (withProject.length === 0) return 0;
   const wasDone = (e: CalendarEvent) => (asOf.getTime() >= now.getTime() ? isDone(e, asOf) : new Date(e.end) < asOf);
   const done = withProject.filter(wasDone).length;
@@ -161,6 +151,7 @@ export function weeklyStats(events: CalendarEvent[], now: Date = new Date()): We
 
   const completedInRange = (rangeStart: Date, rangeEnd: Date) =>
     events.filter((e) => {
+      if (e.hidden) return false; // a plain event's generated steps aren't separately "completed"
       const end = new Date(e.end);
       return end >= rangeStart && end <= rangeEnd;
     });

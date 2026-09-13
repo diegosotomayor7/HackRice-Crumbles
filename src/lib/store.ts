@@ -45,10 +45,11 @@ type CalendarState = {
   splitDraftCrumb: (id: string, children: [DraftCrumb, DraftCrumb]) => boolean;
   /** Add one new crumb to the staging stack (e.g. a gap-filler inserted between two others). No-op at the cap. */
   insertDraftCrumb: (crumb: DraftCrumb) => boolean;
-  /** Commit one draft crumb to the calendar and drop it from the staging stack. */
-  commitDraftCrumb: (id: string) => void;
+  /** Commit one draft crumb to the calendar and drop it from the staging stack. `isLongtermGoal`
+   *  is the review screen's explicit toggle value at the moment of this commit, not inferred. */
+  commitDraftCrumb: (id: string, isLongtermGoal?: boolean) => void;
   /** Commit every remaining draft crumb to the calendar and close the review screen. */
-  commitAllDraftCrumbs: () => void;
+  commitAllDraftCrumbs: (isLongtermGoal?: boolean) => void;
   /** Discard the whole staging stack without adding anything to the calendar. */
   discardReview: () => void;
 
@@ -67,6 +68,9 @@ type CalendarState = {
   splitTask: (id: string, into: TaskInput[]) => string;
   reorderTasks: (projectId: string, orderedIds: string[]) => string;
   setTaskStatus: (id: string, status: "pending" | "done") => void;
+  /** Generates a plain event's initial steps without touching the event itself — see
+   *  plan.generateHiddenSteps. No-op if the event id doesn't exist. */
+  generateSteps: (eventId: string, steps: TaskInput[]) => void;
 };
 
 export const useCalendarStore = create<CalendarState>()(
@@ -135,20 +139,20 @@ export const useCalendarStore = create<CalendarState>()(
         set({ draftCrumbs: [...current, crumb] });
         return true;
       },
-      commitDraftCrumb: (id) => {
+      commitDraftCrumb: (id, isLongtermGoal) => {
         const current = get().draftCrumbs;
         const crumb = current.find((c) => c.id === id);
         if (!crumb) return;
         const remaining = current.filter((c) => c.id !== id);
         set((state) => ({
-          events: [...state.events, crumb],
+          events: [...state.events, { ...crumb, isLongtermGoal }],
           draftCrumbs: remaining,
           reviewActive: remaining.length > 0,
         }));
       },
-      commitAllDraftCrumbs: () =>
+      commitAllDraftCrumbs: (isLongtermGoal) =>
         set((state) => ({
-          events: [...state.events, ...state.draftCrumbs],
+          events: [...state.events, ...state.draftCrumbs.map((c) => ({ ...c, isLongtermGoal }))],
           draftCrumbs: [],
           reviewActive: false,
         })),
@@ -180,6 +184,11 @@ export const useCalendarStore = create<CalendarState>()(
         return result.summary;
       },
       setTaskStatus: (id, status) => set((state) => ({ events: plan.setTaskStatus(state.events, id, status) })),
+      generateSteps: (eventId, steps) => {
+        const container = get().events.find((e) => e.id === eventId);
+        if (!container) return;
+        set({ events: plan.generateHiddenSteps(get().events, container, steps) });
+      },
     }),
     {
       name: "crumbles-storage", // localStorage key — keeps the demo state across refreshes

@@ -43,20 +43,24 @@ export default function Calendar() {
   // from the same palette as PROJECT_COLORS in api/chat/route.ts.
   const FALLBACK_EVENT_COLOR = "#f6c98a";
 
-  const fcEvents = events.map((e) => ({
-    id: e.id,
-    title: e.title,
-    start: e.start,
-    end: e.end,
-    allDay: e.allDay,
-    backgroundColor: e.color ?? FALLBACK_EVENT_COLOR,
-    borderColor: e.color ?? FALLBACK_EVENT_COLOR,
-    // Soft pastel backgrounds read poorly with FullCalendar's default white event text.
-    textColor: "#6b3f24",
-    // Faded + struck through once ExecutionScreen marks a step done, instead of removing
-    // it outright — keeps the calendar an honest record of what happened.
-    classNames: e.status === "done" ? ["crumb-task-done"] : [],
-  }));
+  // Excludes `hidden` events — the generated steps of a plain event's breakdown, which live
+  // only in that event's own ExecutionScreen, not as separate blocks on the calendar grid.
+  const fcEvents = events
+    .filter((e) => !e.hidden)
+    .map((e) => ({
+      id: e.id,
+      title: e.title,
+      start: e.start,
+      end: e.end,
+      allDay: e.allDay,
+      backgroundColor: e.color ?? FALLBACK_EVENT_COLOR,
+      borderColor: e.color ?? FALLBACK_EVENT_COLOR,
+      // Soft pastel backgrounds read poorly with FullCalendar's default white event text.
+      textColor: "#6b3f24",
+      // Faded + struck through once ExecutionScreen marks a step done, instead of removing
+      // it outright — keeps the calendar an honest record of what happened.
+      classNames: e.status === "done" ? ["crumb-task-done"] : [],
+    }));
 
   const handleDrop = (arg: EventDropArg) => {
     updateEvent(arg.event.id, {

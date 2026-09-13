@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { format, parseISO } from "date-fns";
-import { CalendarPlus } from "lucide-react";
+import { CalendarPlus, Target } from "lucide-react";
 import { useCalendarStore, MAX_DRAFT_CRUMBS } from "@/lib/store";
 import { DraftCrumb } from "@/types/event";
 import CrumbCard from "./CrumbCard";
@@ -38,6 +39,12 @@ export default function CrumbReview() {
   const splitDraftCrumb = useCalendarStore((s) => s.splitDraftCrumb);
   const insertDraftCrumb = useCalendarStore((s) => s.insertDraftCrumb);
   const discardReview = useCalendarStore((s) => s.discardReview);
+
+  // Explicit, app-side declaration — never inferred from the goal's wording. Applied to
+  // whatever crumbs are committed at the moment "Add to calendar" (per-card or bulk) is
+  // pressed, so a plain recurring series ("walk the dog every day this week") only ever
+  // becomes a Home "Longterm goal" if the user opts in here.
+  const [isLongtermGoal, setIsLongtermGoal] = useState(false);
 
   // Soonest first — the card you'd act on next sits at the top.
   const sorted = [...draftCrumbs].sort((a, b) => a.start.localeCompare(b.start));
@@ -134,7 +141,7 @@ export default function CrumbReview() {
                     <CrumbCard
                       crumb={crumb}
                       splitBlocked={atCap}
-                      onCommit={() => commitDraftCrumb(crumb.id)}
+                      onCommit={() => commitDraftCrumb(crumb.id, isLongtermGoal)}
                       onSplit={() => split(crumb)}
                     />
                   </div>
@@ -159,7 +166,21 @@ export default function CrumbReview() {
 
       <div className="border-t-2 border-black p-4">
         <button
-          onClick={commitAllDraftCrumbs}
+          onClick={() => setIsLongtermGoal((v) => !v)}
+          className="mb-3 flex w-full items-center gap-2 rounded-lg border-2 border-black p-2.5 text-left"
+          style={{ backgroundColor: isLongtermGoal ? "var(--color-accent)" : "transparent" }}
+        >
+          <span
+            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 border-black ${
+              isLongtermGoal ? "bg-black text-white" : "bg-white"
+            }`}
+          >
+            {isLongtermGoal && <Target className="h-3.5 w-3.5" />}
+          </span>
+          <span className="text-sm font-medium text-black">Track as a long-term goal</span>
+        </button>
+        <button
+          onClick={() => commitAllDraftCrumbs(isLongtermGoal)}
           disabled={draftCrumbs.length === 0}
           className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-black bg-accent py-3 font-bold text-black disabled:opacity-40"
         >

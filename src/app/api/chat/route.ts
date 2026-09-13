@@ -5,14 +5,22 @@ import { NextRequest, NextResponse } from "next/server";
 // This route is the whole "AI brain" of the app. Before the main call, a cheap
 // router (classifyGoal) decides between two tool-forced paths:
 //   1. breakdown -> schedule_calendar_events (the original behavior below).
-//      Quick create: user describes one (or several) concrete thing(s) to
-//      schedule; we return that many events, added straight to the calendar.
-//      Goal breakdown: user describes a big/vague goal; we return an initial
-//      3-8 subtask breakdown covering the whole goal (isGoalBreakdown: true).
-//      The client puts those cards into the swipe-to-refine review stack
-//      instead of the calendar — the user can further split any one subtask
-//      that still feels too big (see /api/decompose) or insert a gap-filler
-//      between two neighboring cards (see /api/insert-crumb).
+//      Quick create (isGoalBreakdown: false) -> anything that fits in a single
+//      day, even a chore with several physical sub-steps ("clean my bathroom"),
+//      a few unrelated concrete things, or a recurring same-task series. Each
+//      becomes its own plain event, added straight to the calendar, with no
+//      projectTitle grouping and no sub-steps enumerated here — a step only
+//      gets generated once the user taps that specific event on Home's Today's
+//      Plan (see page.tsx's openTodayEvent, which mints a one-event project and
+//      has ExecutionScreen auto-request a breakdown for just that occurrence).
+//      Goal breakdown (isGoalBreakdown: true) -> a genuine long-term goal
+//      spanning multiple days/weeks/months; we return an initial 3-8 subtask
+//      breakdown covering the whole goal. The client puts those cards into the
+//      swipe-to-refine review stack instead of the calendar — the user can
+//      further split any one subtask that still feels too big (see
+//      /api/decompose) or insert a gap-filler between two neighboring cards
+//      (see /api/insert-crumb), then explicitly opts it into Home's "Longterm
+//      goals" via CrumbReview's toggle (never inferred here).
 //   2. clarify -> ask_clarifying_questions. Only taken when the goal is vague
 //      enough that a missing detail (timeframe/cadence/session_length/
 //      starting_point) would change the STRUCTURE of the breakdown, not just
@@ -35,8 +43,10 @@ const scheduleTool = {
       isGoalBreakdown: {
         type: Type.BOOLEAN,
         description:
-          "True when the user described a big, vague, or multi-step goal/project. False for a single " +
-          "concrete thing to schedule, or when just chatting.",
+          "True ONLY for a genuine long-term goal spanning multiple days/weeks/months (e.g. \"win a " +
+          "hackathon\", \"learn Spanish\"). False for anything that fits in one day — including a chore or " +
+          "task with several physical sub-steps (e.g. \"clean my bathroom\") — a single concrete thing to " +
+          "schedule, several concrete unrelated things, a recurring same-task series, or just chatting.",
       },
       events: {
         type: Type.ARRAY,
@@ -61,8 +71,9 @@ const scheduleTool = {
             projectTitle: {
               type: Type.STRING,
               description:
-                "Only set when isGoalBreakdown is true (the goal itself, e.g. \"Winning the hackathon\") or " +
-                "this event is one of several standalone events from the same request. Omit otherwise.",
+                "Only set when isGoalBreakdown is true — the goal itself, e.g. \"Winning the hackathon\". Always " +
+                "omit when isGoalBreakdown is false, even for a recurring series — each occurrence stays its " +
+                "own independent event, not grouped into a shared plan.",
             },
           },
           required: ["title", "start", "end"],
@@ -300,14 +311,21 @@ export async function POST(req: NextRequest) {
           `acceptable if the user explicitly asks for two things at the same time.` +
           `\n\n` +
           `Always respond by calling schedule_calendar_events. Decide which of these two modes applies:\n` +
-          `1. isGoalBreakdown: false — the user described ONE concrete thing to schedule (or several concrete, ` +
-          `unrelated things), or is just asking a question/chatting. Return that many events directly (zero if ` +
-          `just chatting). If the user asks for something recurring across multiple weeks (e.g. "every Monday and ` +
-          `Wednesday for the next 6 weeks"), you MUST enumerate every single occurrence as its own event for the ` +
-          `ENTIRE requested range — never stop after just the first few; count the occurrences yourself before ` +
-          `answering. Give every event from the same recurring series the same projectTitle.\n` +
-          `2. isGoalBreakdown: true — the user described a big, vague, or multi-step goal or project (e.g. "I want ` +
-          `to win a hackathon", "build a marketing site"). Break it into 3-8 concrete subtasks that cover the ` +
+          `1. isGoalBreakdown: false — anything that fits inside a single day, EVEN IF it has several physical ` +
+          `sub-steps. "Clean my bathroom", "do the dishes", "pack for my trip tomorrow" all stay false — a chore ` +
+          `having multiple hands-on steps does not make it a long-term goal, it just makes it one task with some ` +
+          `substance to it. Return ONE event for the task itself (e.g. title "Clean bathroom", not a list of its ` +
+          `sub-steps) — never enumerate its physical sub-steps yourself; the user can tap the event afterward to ` +
+          `get an AI-generated breakdown into steps at that point, so don't do that work here. Also use false for ` +
+          `several concrete, unrelated things in one message, or just chatting/answering a question (zero events). ` +
+          `If the user asks for something recurring across multiple weeks (e.g. "clean the bathroom every Friday", ` +
+          `"every Monday and Wednesday for the next 6 weeks"), you MUST enumerate every single occurrence as its ` +
+          `own event for the ENTIRE requested range — never stop after just the first few; count the occurrences ` +
+          `yourself before answering. Leave projectTitle unset on every one of these events, even a recurring ` +
+          `series — each occurrence is independently tappable into its own steps later, not one shared plan.\n` +
+          `2. isGoalBreakdown: true — ONLY a genuine long-term goal that inherently spans multiple days, weeks, or ` +
+          `months and needs real, separately-scheduled milestones (e.g. "I want to win a hackathon", "build a ` +
+          `marketing site"). Break it into 3-8 concrete subtasks that cover the ` +
           `WHOLE arc of the goal end to end — not just the first couple of steps. For a hackathon-style goal that ` +
           `means something like: set up the repo, scope/outline the idea, build the core feature(s), build any ` +
           `remaining features, prepare the demo/pitch, submit — never stop at just "set up" and "outline." Each ` +

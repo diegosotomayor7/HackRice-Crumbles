@@ -14,6 +14,13 @@ import AgentInputBar from "@/components/execution/AgentInputBar";
 
 const HIGHLIGHT_MS = 1600;
 
+// A standalone event's initial steps are generated and saved (via /api/generate-steps +
+// the store's splitTask) BEFORE this ever mounts — see page.tsx's openTodayEvent — so by
+// the time this opens, `plan.tasks` is already whatever it should show. This used to also
+// auto-fire a "break this down" request to /api/agent on mount, but that route's split_task
+// is judgment-based (the general execution agent can reasonably decide a task isn't "too
+// big" and decline), which isn't good enough for a bootstrap step that must always produce
+// something — hence the dedicated, guaranteed-count route instead.
 export default function ExecutionScreen({ projectId, onExit }: { projectId: string; onExit: () => void }) {
   const plan = usePlan(projectId);
   const { send, pending, ephemeral } = useAgent(plan);
