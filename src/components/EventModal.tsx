@@ -92,22 +92,25 @@ export default function EventModal({ mode, initial, onSave, onDelete, onClose }:
           />
 
           <div className="flex gap-2">
-            <label className="flex-1 text-xs text-ink-muted">
+            {/* min-w-0 lets each label actually shrink to its flex-basis — without it, a
+                datetime-local input's intrinsic content width overflows the flex item and
+                pushes the End field partly outside the modal. */}
+            <label className="min-w-0 flex-1 text-xs text-ink-muted">
               Start
               <input
                 type="datetime-local"
                 value={start}
                 onChange={(e) => setStart(e.target.value)}
-                className="mt-1 w-full rounded-md border border-ink/10 bg-transparent px-2 py-1.5 text-sm text-ink"
+                className="mt-1 w-full min-w-0 rounded-md border border-ink/10 bg-transparent px-2 py-1.5 text-sm text-ink"
               />
             </label>
-            <label className="flex-1 text-xs text-ink-muted">
+            <label className="min-w-0 flex-1 text-xs text-ink-muted">
               End
               <input
                 type="datetime-local"
                 value={end}
                 onChange={(e) => setEnd(e.target.value)}
-                className="mt-1 w-full rounded-md border border-ink/10 bg-transparent px-2 py-1.5 text-sm text-ink"
+                className="mt-1 w-full min-w-0 rounded-md border border-ink/10 bg-transparent px-2 py-1.5 text-sm text-ink"
               />
             </label>
           </div>
